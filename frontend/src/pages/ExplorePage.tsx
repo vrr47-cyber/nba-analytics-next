@@ -1,0 +1,2 @@
+import { EmptyState } from "../components/EmptyState";
+export function ExplorePage() { return <><section className="hero"><p className="eyebrow">Provider-neutral foundation</p><h1>Explore the signal when the data is ready.</h1><p>This application is connected to no validated basketball dataset yet. Analytical modules remain intentionally unavailable.</p></section><EmptyState message="No teams, players, scores, rankings, forecasts, or metrics are being displayed in Phase 1." /></>; }
