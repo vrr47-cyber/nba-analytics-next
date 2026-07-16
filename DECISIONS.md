@@ -85,3 +85,11 @@ Roster membership and standings are observations. New snapshots are added; absen
 Status: Accepted
 
 Canonical schema readiness, a source run, or a complete-looking count does not publish a dataset. Coverage, consistency, freshness, truth validation, and synthetic-data policy remain explicit publication gates.
+
+## D-015 — Offline bundles are provider-neutral JSONL
+
+Status: Accepted
+
+Future licensed exports enter through a versioned manifest and checksum-verified
+JSONL bundle. Synthetic bundles require explicit test-mode permission and can
+never create a publishable release.

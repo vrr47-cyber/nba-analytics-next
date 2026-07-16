@@ -15,8 +15,8 @@
     {"path":"players.jsonl","rows":1,"sha256":"04ccadee4758fb0c3107fed610fee6813799cd5ccab4d67033c261bf06d941f3","schema_fingerprint":"phase2a-player-v1"},
     {"path":"rosters.jsonl","rows":1,"sha256":"3b6293806f4f8b5562bc2ecaf9de0e71af10c4abdd62a558915ff3c5755007f4","schema_fingerprint":"phase2a-roster-v1"},
     {"path":"games.jsonl","rows":2,"sha256":"f90fa0f67525e70ccc87bd1d2a7dcde73651498bb45fa50c76d887d87c636f2e","schema_fingerprint":"phase2a-game-v1"},
-    {"path":"team_game_stats.jsonl","rows":1,"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","schema_fingerprint":"phase2a-team-stats-v1"},
-    {"path":"player_game_stats.jsonl","rows":1,"sha256":"ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356","schema_fingerprint":"phase2a-player-stats-v1"},
+    {"path":"team_game_stats.jsonl","rows":1,"sha256":"15e96a7144a1e301c11cf01b4c6bd5de656508617bfc962d35b52b1b36fcf953","schema_fingerprint":"phase2a-team-stats-v1"},
+    {"path":"player_game_stats.jsonl","rows":1,"sha256":"3b5e6919c1d66a1b16456590a502367f0ca2aefaa5f82ec3263ff1844c190903","schema_fingerprint":"phase2a-player-stats-v1"},
     {"path":"standings.jsonl","rows":1,"sha256":"7105ff8f4c4de275fc6fba6fee20cc9895950e1f1e9d635d9a9730b08f7693c4","schema_fingerprint":"phase2a-standings-v1"}
   ],
   "expected_entities": null,

@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import Competition, Game, League, Player, PlayerProviderId, RosterSnapshot, Season, SourceRun, StandingsSnapshot, Team, TeamProviderId
+from backend.app.database.models import Competition, Game, GameProviderId, League, Player, PlayerGameStats, PlayerProviderId, RosterSnapshot, Season, SourceRun, StandingsSnapshot, Team, TeamGameStats, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository
 from backend.app.domain.canonical import NormalizedCompetition, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedStandingsRow, NormalizedTeam
 from backend.app.domain.ingestion import IngestionBatch, IngestionOutcome
@@ -162,8 +162,17 @@ class IngestionService:
                 self.session.flush()
                 self.session.add(GameProviderId(provider_name=record.source.provider, external_id=record.source.external_id, game_id=existing.id, first_observed_at=datetime.fromisoformat(record.source.retrieved_at), last_observed_at=datetime.fromisoformat(record.source.retrieved_at)))
                 written += 1
-            elif existing.status == "final" and record.status != "final":
+            elif existing.status == "final" and record.status != "final" and not batch.correction_mode:
                 raise ValueError("final game cannot regress without correction mode")
+            elif existing.status == "final" and record.status == "final" and (existing.home_final_score != record.home_final_score or existing.away_final_score != record.away_final_score):
+                if not batch.correction_mode:
+                    raise ValueError("final score correction requires correction mode")
+                existing.home_final_score = record.home_final_score
+                existing.away_final_score = record.away_final_score
+            else:
+                existing.status = record.status
+                existing.home_final_score = record.home_final_score
+                existing.away_final_score = record.away_final_score
         return written
 
     def _standings(self, batch: IngestionBatch[NormalizedStandingsRow], source_run_id: UUID) -> int:
@@ -180,4 +189,35 @@ class IngestionService:
         return written
 
     def _dependent_rows(self, batch: IngestionBatch[Any], source_run_id: UUID, kind: str) -> int:
-        raise ValueError(f"{kind} writer requires typed canonical stat records and is not enabled for untyped batches")
+        written = 0
+        for record in batch.records:
+            game = self.session.query(Game).join(GameProviderId).filter(GameProviderId.provider_name == record.source.provider, GameProviderId.external_id == record.game_external_id).one()
+            if game.status != "final":
+                raise ValueError(f"{kind} requires a final game")
+            team = self.session.query(Team).join(TeamProviderId).filter(TeamProviderId.provider_name == record.source.provider, TeamProviderId.external_id == record.team_external_id).one()
+            fields = record.model_dump(exclude={"source", "game_external_id", "team_external_id", "opponent_external_id", "player_external_id"}, exclude_none=False)
+            fields["game_id"] = game.id
+            fields["team_id"] = team.id
+            fields["source_run_id"] = source_run_id
+            existing: Any
+            model: Any
+            if kind == "team_game_stats":
+                opponent = self.session.query(Team).join(TeamProviderId).filter(TeamProviderId.provider_name == record.source.provider, TeamProviderId.external_id == record.opponent_external_id).one()
+                if {team.id, opponent.id} != {game.home_team_id, game.away_team_id}:
+                    raise ValueError("team stat participants do not match game")
+                fields["opponent_team_id"] = opponent.id
+                existing = self.session.query(TeamGameStats).filter_by(game_id=game.id, team_id=team.id).one_or_none()
+                model = TeamGameStats
+            else:
+                player = self.session.query(Player).join(PlayerProviderId).filter(PlayerProviderId.provider_name == record.source.provider, PlayerProviderId.external_id == record.player_external_id).one()
+                fields["player_id"] = player.id
+                existing = self.session.query(PlayerGameStats).filter_by(game_id=game.id, team_id=team.id, player_id=player.id).one_or_none()
+                model = PlayerGameStats
+            if existing is None:
+                self.session.add(model(**fields))
+                written += 1
+            elif batch.correction_mode:
+                for key, value in fields.items():
+                    if key not in {"game_id", "team_id", "player_id", "source_run_id"}:
+                        setattr(existing, key, value)
+        return written

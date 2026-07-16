@@ -48,6 +48,16 @@ Synthetic fixtures, when explicitly enabled for tests, use invented entities and
 are never publication-ready. Realistic placeholder NBA statistics are prohibited
 outside the clearly labeled `design-prototype` branch.
 
+Validate the provider-neutral synthetic bundle without database access:
+
+```bash
+python -m backend.app.jobs.import_dataset_bundle \
+  --bundle backend/tests/fixtures/synthetic_bundle \
+  --validate-only --allow-synthetic --json
+```
+
+Synthetic bundles are rejected by default and are forbidden in production.
+
 Phase 2A migration validation requires PostgreSQL. Apply it with
 `pnpm run db:migrate` after the database is available; Docker was unavailable in
 the local implementation environment, so live migration execution remains a CI

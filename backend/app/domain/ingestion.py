@@ -36,6 +36,7 @@ class IngestionBatch(BaseModel, Generic[T]):
     warnings: list[str] = Field(default_factory=list)
     source_completeness: dict[str, Any] | None = None
     outcome: IngestionOutcome
+    correction_mode: bool = False
 
     @property
     def is_valid_empty(self) -> bool:

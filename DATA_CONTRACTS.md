@@ -107,3 +107,8 @@ Ingestion batches include provider, operation, retrieval/source timestamps,
 schema fingerprint, request scope, normalized records, warnings, completeness
 metadata, and an explicit outcome. Empty successful responses require explicit
 completeness handling and are not automatically treated as successful datasets.
+
+Phase 2B adds a versioned JSONL bundle manifest with SHA-256 checksums, row
+counts, schema fingerprints, scope, license metadata, and synthetic status.
+The validator rejects path traversal, checksum, row-count, malformed JSONL, and
+unsupported-version failures before persistence.

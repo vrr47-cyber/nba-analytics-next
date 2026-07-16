@@ -12,7 +12,7 @@ Complete: target monorepo directories, Python project metadata, React/Vite front
 
 ## Phase 2 — canonical entities and coverage
 
-Phase 2A complete locally: canonical entities, provider mappings, normalized batches, source-run lifecycle, initial transactional team/player ingestion, coverage evaluation contracts, publication blocking states, and Alembic migration `0002_canonical_entities`. No truth provider, real data, or public entity endpoints.
+Phase 2A/2B complete locally: canonical entities, provider mappings, normalized batches, source-run lifecycle, repositories, ingestion boundaries, coverage contracts, manifest-driven JSONL validation, and synthetic fixtures. PostgreSQL execution remains pending because Docker is unavailable. No truth provider, real data, or public entity endpoints.
 
 ## Phase 3 — completed-game analytics
 
