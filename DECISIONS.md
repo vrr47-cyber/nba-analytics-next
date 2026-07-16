@@ -35,3 +35,17 @@ Realistic placeholder NBA statistics are prohibited outside the clearly labeled 
 Status: Requires product approval
 
 Before implementation resumes, approve primary/validation/live providers, legal/source terms, coverage tolerances, qualification thresholds, retention periods, hosting choices, authentication scope, and baseline model evaluation targets.
+
+## D-007 — NBA data provider strategy
+
+Status: Recommended; requires approval and commercial confirmation
+
+The recommended architecture is Sportradar as the primary commercial persistent/live provider, SportsDataIO as an independently contracted truth-validation source, NBA.com as a link-only official archival destination subject to written deep-link confirmation, and a stale-release/Live-off fallback rather than an unlicensed scraper. BALLDONTLIE, `nba_api`, NBA.com endpoints, and Basketball Reference remain research or link-only options under their published restrictions.
+
+The recommendation is based on technical fit, not a claim that public documentation grants all required rights. The production gate is a signed agreement that names the product, covers the needed NBA fields including shot attempts, permits the required storage and display, states attribution, and defines retention, deletion, rate, SLA, and commercial terms.
+
+## D-008 — Do not treat endpoint access as permission
+
+Status: Accepted
+
+The existence of `nba_api` or an accessible NBA.com endpoint does not establish authorization to collect, store, train on, redistribute, or commercially display the data. The same rule applies to scraping Basketball Reference or using a low-cost aggregator beyond its published terms.
