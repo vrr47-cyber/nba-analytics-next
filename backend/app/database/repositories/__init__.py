@@ -1,11 +1,12 @@
 from .canonical import (
-    BoxScoreRepository, CoverageRepository, GameRepository, PlayerRepository,
+    BoxScoreRepository, CompetitionRepository, CoverageRepository, DatasetReleaseRepository, GameRepository, LeagueRepository, PlayerGameStatsRepository, PlayerRepository,
     ProviderIdentityRepository, RepositoryError, RosterRepository,
-    SeasonRepository, StandingsRepository, TeamRepository,
+    SeasonRepository, SourceRunRepository, StandingsRepository, TeamGameStatsRepository, TeamRepository,
 )
 
 __all__ = [
     "BoxScoreRepository", "CoverageRepository", "GameRepository", "PlayerRepository",
+    "CompetitionRepository", "DatasetReleaseRepository", "LeagueRepository", "PlayerGameStatsRepository",
     "ProviderIdentityRepository", "RepositoryError", "RosterRepository",
-    "SeasonRepository", "StandingsRepository", "TeamRepository",
+    "SeasonRepository", "SourceRunRepository", "StandingsRepository", "TeamGameStatsRepository", "TeamRepository",
 ]

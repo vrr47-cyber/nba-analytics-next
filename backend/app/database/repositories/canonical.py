@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.database.models import (
-    CoverageEvaluation, Game, GameProviderId, Player, PlayerGameStats,
+    Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, Player, PlayerGameStats,
     PlayerProviderId, RosterSnapshot, Season, StandingsSnapshot, Team,
-    TeamGameStats, TeamProviderId,
+    TeamGameStats, TeamProviderId, SourceRun,
 )
 
 
@@ -40,6 +40,20 @@ class SeasonRepository(_Repository[Season]):
 
     def by_code(self, league_id: UUID, season_code: str) -> Season | None:
         return self.session.scalar(select(Season).where(Season.league_id == league_id, Season.season_code == season_code))
+
+
+class LeagueRepository(_Repository[League]):
+    model = League
+
+    def by_code(self, code: str) -> League | None:
+        return self.session.scalar(select(League).where(League.code == code))
+
+
+class CompetitionRepository(_Repository[Competition]):
+    model = Competition
+
+    def by_code(self, league_id: UUID, code: str) -> Competition | None:
+        return self.session.scalar(select(Competition).where(Competition.league_id == league_id, Competition.code == code))
 
 
 class TeamRepository(_Repository[Team]):
@@ -75,12 +89,28 @@ class BoxScoreRepository:
         return list(self.session.scalars(select(PlayerGameStats)))
 
 
+class TeamGameStatsRepository(_Repository[TeamGameStats]):
+    model = TeamGameStats
+
+
+class PlayerGameStatsRepository(_Repository[PlayerGameStats]):
+    model = PlayerGameStats
+
+
 class StandingsRepository(_Repository[StandingsSnapshot]):
     model = StandingsSnapshot
 
 
 class CoverageRepository(_Repository[CoverageEvaluation]):
     model = CoverageEvaluation
+
+
+class SourceRunRepository(_Repository[SourceRun]):
+    model = SourceRun
+
+
+class DatasetReleaseRepository(_Repository[DatasetRelease]):
+    model = DatasetRelease
 
 
 class ProviderIdentityRepository:

@@ -36,9 +36,15 @@ class DatasetRelease(Base):
     dataset_name: Mapped[str] = mapped_column(String(100))
     version: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(30))
+    schema_version: Mapped[str] = mapped_column(String(50), default="phase2b-v1")
+    validation_status: Mapped[str] = mapped_column(String(30), default="pending")
+    publication_status: Mapped[str] = mapped_column(String(30), default="withheld")
     source_run_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
     coverage_json: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     provenance_json: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    manifest_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    manifest_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
+    generating_commit: Mapped[str | None] = mapped_column(String(64), nullable=True)
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
