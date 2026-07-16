@@ -8,7 +8,7 @@ Complete the product boundary, architecture, frontend decision, data contracts, 
 
 ## Phase 1 — repository and contracts
 
-Create the target monorepo directories, Python environment, React/Vite frontend shell, typed API client, PostgreSQL configuration, migration baseline, structured logging, and contract fixtures. Do not ingest external data yet.
+Complete: target monorepo directories, Python project metadata, React/Vite frontend shell, typed API mirror, PostgreSQL configuration, foundation migration baseline, structured logging, provider protocols, synthetic safety tests, OpenAPI checks, and repository hygiene checks. No external data is ingested.
 
 ## Phase 2 — canonical entities and coverage
 

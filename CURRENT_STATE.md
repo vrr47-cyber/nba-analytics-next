@@ -5,13 +5,15 @@ As of 2026-07-16
 ## Repository
 
 - Git repository: `nba-analytics-next`.
-- `main` contains the initial site starter and the Phase 0 documentation commit.
+- `main` contains the Phase 0 documentation and the Phase 1 provider-neutral foundation.
 - `design-prototype` preserves the visual dashboard prototype and its synthetic-data warning.
 - The repository has a local `origin` configured from the requested GitHub repository; its upstream branch is currently absent because the remote repository had no initial commit when cloned.
 
 ## Product status
 
-Development is paused at Phase 0. No production backend exists. No production analytics data pipeline exists. No production model exists. The visual prototype is not a source of truth for metrics, architecture, or production technology.
+Phase 1 foundation is implemented. No production analytics data pipeline or model exists. The visual prototype is not a source of truth for metrics, architecture, or production technology.
+
+The backend exposes process health, database/provider readiness, truthful status, and an empty seasons envelope. The frontend is a small React/Vite shell with Explore and Data Status routes. PostgreSQL migrations create only foundation metadata tables; no NBA domain tables or provider adapters exist yet.
 
 ## Prototype status
 
@@ -25,6 +27,8 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - Redis is reserved for expiring live sessions.
 - Production frontend selection: React with Vite.
 - Realistic placeholder NBA statistics are prohibited outside `design-prototype`.
+- Development fixtures are invented, synthetic, test-only, and never publishable.
+- The default provider is unconfigured and makes no network calls.
 
 ## Not yet decided or approved
 
@@ -36,3 +40,4 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - Authentication and access policy.
 - Production domains and deployment environment.
 - Model features, training data, and evaluation thresholds.
+- Phase 2 field-level canonical entity schema and ingestion contracts.

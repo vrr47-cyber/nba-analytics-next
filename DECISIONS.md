@@ -49,3 +49,27 @@ The recommendation is based on technical fit, not a claim that public documentat
 Status: Accepted
 
 The existence of `nba_api` or an accessible NBA.com endpoint does not establish authorization to collect, store, train on, redistribute, or commercially display the data. The same rule applies to scraping Basketball Reference or using a low-cost aggregator beyond its published terms.
+
+## D-009 — Standardize the monorepo on pnpm
+
+Status: Accepted
+
+The JavaScript workspace uses pnpm and one committed `pnpm-lock.yaml`. npm lockfiles and generated dependency directories are not tracked.
+
+## D-010 — Phase 1 provider-neutral foundation
+
+Status: Accepted
+
+Phase 1 defines replaceable provider protocols, publication envelopes, PostgreSQL migration readiness, and a truthful no-data application shell. It does not integrate a commercial provider or create NBA domain tables.
+
+## D-011 — OpenAPI contract policy
+
+Status: Accepted
+
+Policy B is used for Phase 1: OpenAPI is generated from FastAPI during checks and validated for required paths. A checked-in generated frontend client is deferred until canonical response schemas stabilize; the frontend keeps a small typed mirror for the shell.
+
+## D-012 — Synthetic fixture isolation
+
+Status: Accepted
+
+Synthetic fixtures are explicitly opt-in, use invented names, carry synthetic and non-publishable markers, and are unavailable in production. No realistic NBA placeholder statistics are permitted outside `design-prototype`.
