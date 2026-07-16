@@ -47,3 +47,8 @@ pnpm run repo:check
 Synthetic fixtures, when explicitly enabled for tests, use invented entities and
 are never publication-ready. Realistic placeholder NBA statistics are prohibited
 outside the clearly labeled `design-prototype` branch.
+
+Phase 2A migration validation requires PostgreSQL. Apply it with
+`pnpm run db:migrate` after the database is available; Docker was unavailable in
+the local implementation environment, so live migration execution remains a CI
+or developer-machine check.

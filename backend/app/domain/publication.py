@@ -13,6 +13,10 @@ class PublicationCode(StrEnum):
     BLOCKED_MISSING_DATASET = "blocked_missing_dataset"
     SYNTHETIC_FIXTURE = "synthetic_fixture"
     UNSUPPORTED_SCOPE = "unsupported_scope"
+    BLOCKED_UNKNOWN_COVERAGE = "blocked_unknown_coverage"
+    BLOCKED_PARTIAL_COVERAGE = "blocked_partial_coverage"
+    BLOCKED_INCONSISTENT_DATA = "blocked_inconsistent_data"
+    COMPLETE_VALIDATED_DATASET = "complete_validated_dataset"
 
 
 class PublicationDecision(BaseModel):
@@ -45,3 +49,19 @@ class PublicationDecision(BaseModel):
             code=PublicationCode.SYNTHETIC_FIXTURE,
             reason="Synthetic fixture data is test-only and cannot be published.",
         )
+
+    @classmethod
+    def from_coverage(cls, completeness: str, synthetic: bool = False) -> "PublicationDecision":
+        if synthetic:
+            return cls.synthetic()
+        mapping = {
+            "unknown": (PublicationCode.BLOCKED_UNKNOWN_COVERAGE, "Expected population is unknown."),
+            "partial": (PublicationCode.BLOCKED_PARTIAL_COVERAGE, "Canonical coverage is partial."),
+            "inconsistent": (PublicationCode.BLOCKED_INCONSISTENT_DATA, "Canonical data is inconsistent."),
+            "stale": (PublicationCode.BLOCKED_STALE_DATA, "Canonical source data is stale."),
+            "failed_validation": (PublicationCode.BLOCKED_FAILED_VALIDATION, "Canonical validation failed."),
+            "empty": (PublicationCode.BLOCKED_MISSING_DATASET, "No canonical data is available."),
+            "complete": (PublicationCode.COMPLETE_VALIDATED_DATASET, "Canonical coverage is complete and validated.",),
+        }
+        code, reason = mapping.get(completeness, (PublicationCode.BLOCKED_FAILED_VALIDATION, "Unknown coverage state."))
+        return cls(code=code, reason=reason, publishable=code == PublicationCode.COMPLETE_VALIDATED_DATASET)

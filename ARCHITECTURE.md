@@ -65,3 +65,13 @@ docs/{decisions,methodology}
 ```
 
 Raw data, training data, model binaries, credentials, and local database files are not committed to Git.
+# Phase 2A implementation clarification
+
+The canonical persistence layer extends the Phase 1 PostgreSQL foundation with
+provider-neutral entities, provider identity mappings, timestamped observations,
+and coverage evaluations. Ingestion services own transaction boundaries and
+source-run lifecycle; repositories own persistence queries only. Publication
+policy consumes coverage decisions and remains separate from repositories.
+
+Live state, Redis, shot records, model training, and public Teams/Players
+endpoints remain intentionally absent.

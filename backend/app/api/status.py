@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
 
 from backend.app.api.dependencies import get_services
 from backend.app.database.session import check_readiness
@@ -12,6 +13,12 @@ router = APIRouter(prefix="/api/v1", tags=["status"])
 def status(services: AppServices = Depends(get_services)) -> StatusResponse:
     db = check_readiness(services.engine)
     provider = services.provider.readiness()
+    releases = 0
+    latest_coverage = None
+    if db.connected and db.schema_ready and services.engine is not None:
+        with services.engine.connect() as connection:
+            releases = int(connection.execute(text("SELECT count(*) FROM dataset_releases")).scalar_one())
+            latest_coverage = connection.execute(text("SELECT completeness_status FROM coverage_evaluations ORDER BY evaluated_at DESC LIMIT 1")).scalar_one_or_none()
     return StatusResponse(
         application_name=services.settings.app_name,
         application_version=services.settings.app_version,
@@ -26,4 +33,7 @@ def status(services: AppServices = Depends(get_services)) -> StatusResponse:
         model_versions=[],
         publication_ready=False,
         publication_reason="No validated dataset is available.",
+        canonical_schema_ready=db.schema_ready,
+        dataset_release_count=releases,
+        latest_coverage_evaluation=latest_coverage,
     )
