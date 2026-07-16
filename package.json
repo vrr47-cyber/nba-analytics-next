@@ -1,42 +1,31 @@
 {
-  "name": "site-creator-vinext-starter",
+  "name": "nba-analytics-next",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
-    "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
-    "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "dev": "pnpm run frontend:dev",
+    "frontend:dev": "pnpm --dir frontend dev",
+    "frontend:build": "pnpm --dir frontend build",
+    "frontend:test": "pnpm --dir frontend test",
+    "frontend:lint": "pnpm --dir frontend lint",
+    "frontend:typecheck": "pnpm --dir frontend typecheck",
+    "build": "pnpm run frontend:build",
+    "test": "pnpm run backend:test && pnpm run frontend:test",
+    "lint": "pnpm run backend:lint && pnpm run frontend:lint",
+    "typecheck": "pnpm run backend:typecheck && pnpm run frontend:typecheck",
+    "backend:dev": "python3 -m uvicorn backend.app.main:create_app --factory --reload --host 0.0.0.0 --port 8000",
+    "backend:test": "python3 -m pytest backend/tests",
+    "backend:lint": "python3 -m ruff check backend",
+    "backend:typecheck": "python3 -m mypy backend/app",
+    "db:migrate": "python3 -m alembic -c backend/alembic.ini upgrade head",
+    "db:downgrade": "python3 -m alembic -c backend/alembic.ini downgrade -1",
+    "api:openapi": "python3 -m backend.app.openapi > backend/openapi.json",
+    "api:check": "python3 scripts/check_openapi.py",
+    "repo:check": "python3 scripts/check_repository_hygiene.py"
   },
-  "dependencies": {
-    "drizzle-orm": "0.45.2",
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "react-loading-skeleton": "3.5.0"
-  },
-  "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@tailwindcss/postcss": "4.2.1",
-    "@types/node": "22.19.19",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
-    "react-server-dom-webpack": "19.2.6",
-    "tailwindcss": "4.2.1",
-    "typescript": "5.9.3",
-    "vinext": "0.0.50",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
-  },
-  "type": "module"
+  "workspaces": ["frontend"]
 }
