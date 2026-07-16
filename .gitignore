@@ -8,6 +8,7 @@ frontend/dist/
 coverage/
 frontend/coverage/
 *.tsbuildinfo
+*.egg-info/
 
 # Python environments, caches, and coverage
 .venv/
