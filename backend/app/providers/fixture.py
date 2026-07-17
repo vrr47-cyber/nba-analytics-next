@@ -7,9 +7,10 @@ from typing import Any
 
 from backend.app.domain.box_scores import NormalizedBoxScorePayload
 from backend.app.domain.play_by_play import NormalizedEventParticipant, NormalizedPlayByPlayEvent, NormalizedPlayByPlayPayload, ParticipantRole, PlayEventType
+from backend.app.domain.shots import NormalizedShot, ShotResult, ShotType, derived_distance, normalize_coordinates
 from backend.app.domain.canonical import BoxScoreLine, CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedPlayerGameStats, NormalizedRosterEntry, NormalizedTeam, NormalizedTeamGameStats, ParticipationStatus, SourceMetadata
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY, TeamScopePolicy
-from backend.app.providers.dto import FixtureBoxScoreDTO, FixtureEventParticipantDTO, FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixturePlayByPlayDTO, FixturePlayByPlayEventDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO, FixturePlayerStatDTO, FixtureTeamStatDTO
+from backend.app.providers.dto import FixtureBoxScoreDTO, FixtureEventParticipantDTO, FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixturePlayByPlayDTO, FixturePlayByPlayEventDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO, FixturePlayerStatDTO, FixtureTeamStatDTO, FixtureShotDTO, FixtureShotsDTO
 
 
 class FixtureTeamsProvider:
@@ -210,3 +211,26 @@ class FixtureTeamsProvider:
         fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
         normalized_events = tuple(NormalizedPlayByPlayEvent(source=SourceMetadata(provider=self.name, external_id=event.provider_event_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, provider_event_id=event.provider_event_id, sequence_number=event.sequence_number, period=event.period, clock_seconds_remaining=event.clock_seconds_remaining, event_type=PlayEventType(event.event_type), outcome=event.outcome, points_value=event.points_value, home_score=event.home_score, away_score=event.away_score, participants=tuple(NormalizedEventParticipant(role=ParticipantRole(participant.role), team_external_id=participant.provider_team_id, player_external_id=participant.provider_player_id) for participant in event.participants)) for event in payload.events)
         return NormalizedPlayByPlayPayload(game_external_id=payload.provider_game_id, events=normalized_events, complete_payload=payload.complete_payload), payload.schema_version, fingerprint, payload.revision
+
+    def load_shots(self, revision: str = "v1") -> tuple[tuple[NormalizedShot, ...], str, str, str, bool]:
+        loaded_at = datetime(2099, 1, 20, tzinfo=timezone.utc)
+        raw = (
+            FixtureShotDTO(provider_shot_id="shot-redwood-1", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ember", period=1, clock="11:20", sequence_number=1, provider_x=4.0, provider_y=3.0, shot_distance=5.0, zone_code="paint", shot_type="two_point", result="made", point_value=2),
+            FixtureShotDTO(provider_shot_id="shot-redwood-2", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ash", period=1, clock="09:10", sequence_number=2, provider_x=18.0, provider_y=2.0, shot_distance=18.1, zone_code="midrange", shot_type="two_point", result="missed", point_value=2),
+            FixtureShotDTO(provider_shot_id="shot-redwood-3", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ember", period=2, clock="06:30", sequence_number=3, provider_x=23.0, provider_y=1.0, shot_distance=23.0, zone_code="three", shot_type="three_point", result="made", point_value=3),
+            FixtureShotDTO(provider_shot_id="shot-redwood-4", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ash", period=3, clock="04:20", sequence_number=4, provider_x=None, provider_y=None, shot_distance=None, zone_code="free_throw", shot_type="free_throw", result="made", point_value=1),
+            FixtureShotDTO(provider_shot_id="shot-cinder-1", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-cinder", provider_player_id="player-flint", period=1, clock="10:40", sequence_number=5, provider_x=3.0, provider_y=3.0, shot_distance=4.2, zone_code="paint", shot_type="two_point", result="made", point_value=2),
+            FixtureShotDTO(provider_shot_id="shot-cinder-2", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-cinder", provider_player_id="player-river", period=2, clock="08:00", sequence_number=6, provider_x=16.0, provider_y=4.0, shot_distance=16.5, zone_code="midrange", shot_type="two_point", result="missed", point_value=2),
+            FixtureShotDTO(provider_shot_id="shot-cinder-3", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-cinder", provider_player_id="player-flint", period=3, clock="05:10", sequence_number=7, provider_x=24.0, provider_y=2.0, shot_distance=24.1, zone_code="three", shot_type="three_point", result="missed", point_value=3),
+            FixtureShotDTO(provider_shot_id="shot-cinder-4", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-cinder", provider_player_id="player-river", period=4, clock="02:00", sequence_number=8, provider_x=None, provider_y=None, shot_distance=None, zone_code="free_throw", shot_type="free_throw", result="made", point_value=1),
+        )
+        if revision == "v2":
+            raw = tuple(row.model_copy(update={"shot_distance": (row.shot_distance + 1 if row.shot_distance is not None else None)}) if row.provider_shot_id == "shot-redwood-2" else row for row in raw)
+        payload = FixtureShotsDTO(schema_version="fixture-shots.v1", revision=revision, loaded_at=loaded_at, provider_game_id="game-redwood-cinder-2099", shots=raw)
+        serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
+        fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
+        normalized: list[NormalizedShot] = []
+        for shot in payload.shots:
+            normalized_x, normalized_y = normalize_coordinates(shot.provider_x, shot.provider_y)
+            normalized.append(NormalizedShot(source=SourceMetadata(provider=self.name, external_id=shot.provider_shot_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=shot.provider_game_id, team_external_id=shot.provider_team_id, player_external_id=shot.provider_player_id, provider_shot_id=shot.provider_shot_id, period=shot.period, clock=shot.clock, sequence_number=shot.sequence_number, provider_x=shot.provider_x, provider_y=shot.provider_y, normalized_x=normalized_x, normalized_y=normalized_y, shot_distance=derived_distance(normalized_x, normalized_y, shot.shot_distance), zone_version="fixture-zones.v1", zone_code=shot.zone_code, shot_type=ShotType(shot.shot_type), result=ShotResult(shot.result), point_value=shot.point_value))
+        return tuple(normalized), payload.schema_version, fingerprint, payload.revision, payload.complete_payload
