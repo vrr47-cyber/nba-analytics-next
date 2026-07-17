@@ -1,4 +1,4 @@
-import type { Envelope, ExploreData, PlayerDetail, PlayerRecentGame, PlayerSplit, PlayerSummary, PlayerTrendPoint, RecentGame, RosterEntry, Season, Status, TeamDetail, TeamSummary, TrendPoint } from "./types";
+import type { Envelope, ExploreData, PlayerDetail, PlayerRecentGame, PlayerShotProfile, PlayerSplit, PlayerSummary, PlayerTrendPoint, RecentGame, RosterEntry, Season, ShotAnalyticsSummary, ShotDistribution, Status, TeamDetail, TeamSummary, TrendPoint } from "./types";
 
 const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 async function request<T>(path: string): Promise<T> { const response = await fetch(`${base}${path}`); if (!response.ok) throw new Error(`API request failed (${response.status}).`); return response.json() as Promise<T>; }
@@ -17,4 +17,7 @@ export const api = {
   playerTrends: (id: string, params: Record<string, string | undefined> = {}) => request<Envelope<PlayerTrendPoint[]>>(`/api/v1/players/${id}/trends${query(params)}`),
   playerSplits: (id: string, params: Record<string, string | undefined> = {}) => request<Envelope<PlayerSplit[]>>(`/api/v1/players/${id}/splits${query(params)}`),
   explore: (params: Record<string, string | undefined> = {}) => request<Envelope<ExploreData>>(`/api/v1/explore${query(params)}`),
+  shotSummary: (params: Record<string, string | undefined> = {}) => request<Envelope<ShotAnalyticsSummary>>(`/api/v1/shots/summary${query(params)}`),
+  playerShots: (id: string, params: Record<string, string | undefined> = {}) => request<Envelope<PlayerShotProfile>>(`/api/v1/shots/players/${id}${query(params)}`),
+  shotZones: (params: Record<string, string | undefined> = {}) => request<Envelope<ShotDistribution[]>>(`/api/v1/shots/zones${query(params)}`),
 };

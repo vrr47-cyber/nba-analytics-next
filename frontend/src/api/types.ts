@@ -20,3 +20,7 @@ export type PlayerSplit = { split: string; sample_size: number; metrics: PlayerM
 export type ExploreSection<T> = { data: T; coverage: Coverage; publication: Publication; provenance: Provenance };
 export type ExploreRecentGame = { game_id: string; date: string; home_team_id: string; home_team_name: string; away_team_id: string; away_team_name: string; home_final_score: number; away_final_score: number; status: string; competition: string; coverage_state: string };
 export type ExploreData = { featured_teams: ExploreSection<TeamSummary[]>; featured_players: ExploreSection<PlayerSummary[]>; recent_games: ExploreSection<ExploreRecentGame[]>; coverage_summary: { teams: Coverage; players: Coverage; recent_games: Coverage } };
+export type ShotDistribution = { key: string; attempts: number; share: number | null };
+export type ShotCoordinate = { x: number; y: number; result: string; shot_type: string };
+export type ShotAnalyticsSummary = { attempts: number; makes: number; field_goal_attempts: number; field_goal_makes: number; three_point_attempts: number; three_point_makes: number; fg_percentage: number | null; three_point_percentage: number | null; effective_fg_percentage: number | null; actual_points: number; average_distance: number | null; expected_fg_percentage: number | null; expected_points: number | null; zone_distribution: ShotDistribution[]; shot_type_distribution: ShotDistribution[]; coordinates: ShotCoordinate[] };
+export type PlayerShotProfile = { player_id: string; summary: ShotAnalyticsSummary };

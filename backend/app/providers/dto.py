@@ -154,3 +154,30 @@ class FixturePlayByPlayDTO(BaseModel):
     provider_game_id: str = Field(min_length=1)
     complete_payload: bool = True
     events: tuple[FixturePlayByPlayEventDTO, ...]
+
+
+class FixtureShotDTO(BaseModel):
+    provider_shot_id: str = Field(min_length=1)
+    provider_game_id: str = Field(min_length=1)
+    provider_team_id: str = Field(min_length=1)
+    provider_player_id: str = Field(min_length=1)
+    period: int = Field(ge=1)
+    clock: str = Field(min_length=1)
+    sequence_number: int | None = Field(default=None, ge=0)
+    provider_x: float | None = None
+    provider_y: float | None = None
+    shot_distance: float | None = Field(default=None, ge=0)
+    zone_code: str = Field(min_length=1)
+    shot_type: str = Field(min_length=1)
+    result: str = Field(min_length=1)
+    point_value: int = Field(ge=0, le=3)
+
+
+class FixtureShotsDTO(BaseModel):
+    provider: str = "fixture"
+    schema_version: str
+    revision: str
+    loaded_at: datetime
+    provider_game_id: str = Field(min_length=1)
+    complete_payload: bool = True
+    shots: tuple[FixtureShotDTO, ...]
