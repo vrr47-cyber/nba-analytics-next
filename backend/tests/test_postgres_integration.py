@@ -73,11 +73,17 @@ def test_fixture_teams_ingestion_is_idempotent_and_withheld(postgres_engine):
     with Session(postgres_engine) as session:
         with session.begin():
             first = ingest_teams_reference(session, provider=provider.name, league=league, teams=teams, schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=scope, synthetic=provider.synthetic)
+            session.flush()
+            first_ids = {row.external_id: row.team_id for row in session.query(TeamProviderId).filter_by(provider_name="fixture").all()}
             second = ingest_teams_reference(session, provider=provider.name, league=league, teams=teams, schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=scope, synthetic=provider.synthetic)
             assert first["publication_status"] == second["publication_status"] == "withheld"
             assert first["rows_written"] == 4
             assert second["rows_written"] == 0
-        assert session.query(Team).filter(Team.slug.in_(["redwood", "cinder", "meadow", "tide"])).count() == 4
+            second_ids = {row.external_id: row.team_id for row in session.query(TeamProviderId).filter_by(provider_name="fixture").all()}
+            assert second_ids == first_ids
+        fixture_league = session.query(League).filter_by(code="fixture-league").one()
+        # The CI job imports a separate synthetic league before integration tests.
+        assert session.query(Team).filter_by(league_id=fixture_league.id).count() == 4
         assert session.query(TeamProviderId).filter_by(provider_name="fixture").count() == 4
         assert session.query(LeagueProviderId).filter_by(provider_name="fixture", external_id="fixture-league").count() == 1
         runs = session.query(SourceRun).filter_by(provider_name="fixture").all()
