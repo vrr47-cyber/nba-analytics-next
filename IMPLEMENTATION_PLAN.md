@@ -20,6 +20,10 @@ Phase 2A/2B complete locally: canonical entities, provider mappings, normalized 
 
 Complete on `phase-3-provider-ingestion`: provider registry/factory, normalized fixture DTOs, a deterministic fictional Teams adapter, versioned active-team scope policy, source-run provenance, coverage evaluation, provider-ID identity binding, and a PostgreSQL migration for generic league-provider mappings. No network calls, credentials, real NBA data, releases, frontend changes, or publication are included.
 
+### Phase 3B — Players and rosters
+
+Complete on `phase-3-player-roster-ingestion`: separate player and roster services, deterministic revisioned fixture DTOs, provider-mapping-first player identity, required existing team/player mappings for rosters, stable season roster memberships, synthetic withholding, and removal of global player-slug uniqueness. No real provider, API, frontend, game, schedule, stats, or model work is included.
+
 Ingest and validate completed-game team/player summaries. Publish Explore, Teams, Players, standings, and power data only through the publication layer. Add explicit source/date/sample context.
 
 ## Phase 4 — shot analytics

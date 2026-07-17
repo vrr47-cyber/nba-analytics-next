@@ -108,3 +108,20 @@ policy, and provider mappings are authoritative for identity.
 Phase 2 had no generic league-provider mapping, so Phase 3A adds that minimal
 identity migration. No other Phase 3 dataset or live/model capability is
 included.
+
+## D-017 — Phase 3B player and roster identity
+
+Status: Accepted for Phase 3B
+
+The repository has no genuinely stable provider-independent canonical player
+identifier. Provider mappings are therefore the only automatic player
+identity mechanism. Unmapped players create new canonical rows; names, slugs,
+teams, birth dates, and other mutable biography are never used for automatic
+cross-provider matching. Player slugs remain descriptive and are indexed but
+not unique.
+
+Roster membership uses one mutable row per season, competition, team, player,
+and stable snapshot timestamp. Replays update provenance and report unchanged
+domain fields; changed fixture revisions update the same row. The existing
+`uq_roster_snapshot_membership` constraint supplies this idempotency because
+Phase 3B requires a non-null competition and stable snapshot timestamp.

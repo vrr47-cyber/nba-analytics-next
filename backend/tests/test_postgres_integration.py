@@ -5,11 +5,14 @@ import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import CoverageEvaluation, DatasetRelease, League, LeagueProviderId, SourceRun, Team, TeamProviderId
+from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, League, LeagueProviderId, Player, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository, RepositoryError
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY
+from backend.app.domain.player_roster_scope import ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY
 from backend.app.providers.registry import create_teams_provider
 from backend.app.services.bundle import import_validated_bundle, validate_bundle
+from backend.app.services.players import ingest_players_reference
+from backend.app.services.rosters import RosterIngestionError, ingest_rosters_reference
 from backend.app.services.teams import ingest_teams_reference
 
 pytestmark = pytest.mark.integration
@@ -91,3 +94,59 @@ def test_fixture_teams_ingestion_is_idempotent_and_withheld(postgres_engine):
         evaluations = session.query(CoverageEvaluation).filter_by(dataset_name="teams").all()
         assert all(evaluation.publication_status == "withheld" for evaluation in evaluations)
         assert session.query(DatasetRelease).filter_by(dataset_name="teams").count() == 0
+
+
+def test_fixture_players_and_rosters_replay_and_revision_are_idempotent(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league_payload, _, _, _, _ = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    players_v1, player_schema, player_fingerprint_v1, _ = provider.load_players("v1")
+    rosters_v1, roster_schema, roster_fingerprint_v1, _ = provider.load_rosters("v1")
+    players_v2, _, player_fingerprint_v2, _ = provider.load_players("v2")
+    rosters_v2, _, roster_fingerprint_v2, _ = provider.load_rosters("v2")
+    with Session(postgres_engine) as session:
+        with session.begin():
+            ingest_teams_reference(session, provider="fixture", league=league_payload, teams=provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)[1], schema_version="fixture-teams.v1", normalized_payload_fingerprint="phase3b-setup", scope_policy=ACTIVE_TEAMS_FIXTURE_POLICY, synthetic=True)
+            league = session.query(League).filter_by(code="fixture-league").one()
+            season = session.query(Season).filter_by(league_id=league.id, season_code="2099-00").one_or_none()
+            if season is None:
+                season = Season(league_id=league.id, season_code="2099-00", display_label="Fixture Season 2099-00", status="completed", is_current=False)
+                session.add(season)
+            competition = session.query(Competition).filter_by(league_id=league.id, code="regular").one_or_none()
+            if competition is None:
+                competition = Competition(league_id=league.id, code="regular", display_name="Fixture Regular", category="league")
+                session.add(competition)
+            session.flush()
+            first_players = ingest_players_reference(session, provider="fixture", players=players_v1, schema_version=player_schema, normalized_payload_fingerprint=player_fingerprint_v1, synthetic=True)
+            first_rosters = ingest_rosters_reference(session, provider="fixture", rosters=rosters_v1, schema_version=roster_schema, normalized_payload_fingerprint=roster_fingerprint_v1, synthetic=True)
+            session.flush()
+            first_player_ids = {row.external_id: row.player_id for row in session.query(PlayerProviderId).filter_by(provider_name="fixture").all()}
+            first_roster_ids = {(row.season_id, row.competition_id, row.team_id, row.player_id, row.snapshot_at): row.id for row in session.query(RosterSnapshot).join(Team).filter(Team.league_id == league.id).all()}
+            replay_players = ingest_players_reference(session, provider="fixture", players=players_v1, schema_version=player_schema, normalized_payload_fingerprint=player_fingerprint_v1, synthetic=True)
+            replay_rosters = ingest_rosters_reference(session, provider="fixture", rosters=rosters_v1, schema_version=roster_schema, normalized_payload_fingerprint=roster_fingerprint_v1, synthetic=True)
+            assert first_players["inserted"] == 4 and first_players["updated"] == 0
+            assert first_rosters["inserted"] == 4 and first_rosters["updated"] == 0
+            assert replay_players["inserted"] == 0 and replay_players["updated"] == 0 and replay_players["unchanged"] == 4
+            assert replay_rosters["inserted"] == 0 and replay_rosters["updated"] == 0 and replay_rosters["unchanged"] == 4
+            replay_player_ids = {row.external_id: row.player_id for row in session.query(PlayerProviderId).filter_by(provider_name="fixture").all()}
+            assert replay_player_ids == first_player_ids
+            assert {(row.season_id, row.competition_id, row.team_id, row.player_id, row.snapshot_at): row.id for row in session.query(RosterSnapshot).join(Team).filter(Team.league_id == league.id).all()} == first_roster_ids
+            revised_players = ingest_players_reference(session, provider="fixture", players=players_v2, schema_version=player_schema, normalized_payload_fingerprint=player_fingerprint_v2, synthetic=True)
+            revised_rosters = ingest_rosters_reference(session, provider="fixture", rosters=rosters_v2, schema_version=roster_schema, normalized_payload_fingerprint=roster_fingerprint_v2, synthetic=True)
+            assert revised_players["inserted"] == 0 and revised_players["updated"] == 1
+            assert revised_rosters["inserted"] == 0 and revised_rosters["updated"] == 1
+            assert {row.external_id: row.player_id for row in session.query(PlayerProviderId).filter_by(provider_name="fixture").all()} == first_player_ids
+            assert {(row.season_id, row.competition_id, row.team_id, row.player_id, row.snapshot_at): row.id for row in session.query(RosterSnapshot).join(Team).filter(Team.league_id == league.id).all()} == first_roster_ids
+            assert session.query(Player).join(PlayerProviderId).filter(PlayerProviderId.provider_name == "fixture").count() == 4
+            assert session.query(RosterSnapshot).join(Team).filter(Team.league_id == league.id).count() == 4
+            assert session.query(DatasetRelease).filter(DatasetRelease.dataset_name.in_(["players", "rosters"])).count() == 0
+            assert all(evaluation.publication_status == "withheld" for evaluation in session.query(CoverageEvaluation).filter(CoverageEvaluation.dataset_name.in_(["players", "rosters"])).all())
+
+
+def test_roster_ingestion_requires_existing_team_mapping(postgres_engine):
+    provider = create_teams_provider("fixture")
+    rosters, schema_version, fingerprint, _ = provider.load_rosters("v1")
+    missing_team = rosters[0].model_copy(update={"team_external_id": "team-not-mapped"})
+    with Session(postgres_engine) as session:
+        with session.begin():
+            with pytest.raises(RosterIngestionError, match="missing canonical team mapping"):
+                ingest_rosters_reference(session, provider=provider.name, rosters=(missing_team,), schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY, synthetic=True)

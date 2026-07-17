@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from backend.app.domain.canonical import NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam, SourceMetadata
+from backend.app.domain.canonical import CompetitionCode, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam, SourceMetadata
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY, TeamScopePolicy
 from backend.app.providers.dto import FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO
 
@@ -45,10 +45,10 @@ class FixtureTeamsProvider:
             revision=revision,
             loaded_at=loaded_at,
             players=(
-                FixturePlayerDTO(provider_player_id="player-ember", slug="ember-vale", full_name="Ember Vale", first_name="Ember", last_name="Vale", position=mutable_position, birth_date="2090-01-01"),
-                FixturePlayerDTO(provider_player_id="player-ash", slug="ash-rowan", full_name="Ash Rowan", first_name="Ash", last_name="Rowan", position="C", birth_date="2089-02-02"),
-                FixturePlayerDTO(provider_player_id="player-flint", slug="flint-moss", full_name="Flint Moss", first_name="Flint", last_name="Moss", position="G", birth_date="2091-03-03"),
-                FixturePlayerDTO(provider_player_id="player-river", slug="river-sage", full_name="River Sage", first_name="River", last_name="Sage", position="F", birth_date="2090-04-04"),
+                FixturePlayerDTO(provider_player_id="player-ember", slug="ember-vale", full_name="Ember Vale", first_name="Ember", last_name="Vale", position=mutable_position, birth_date=date(2090, 1, 1)),
+                FixturePlayerDTO(provider_player_id="player-ash", slug="ash-rowan", full_name="Ash Rowan", first_name="Ash", last_name="Rowan", position="C", birth_date=date(2089, 2, 2)),
+                FixturePlayerDTO(provider_player_id="player-flint", slug="flint-moss", full_name="Flint Moss", first_name="Flint", last_name="Moss", position="G", birth_date=date(2091, 3, 3)),
+                FixturePlayerDTO(provider_player_id="player-river", slug="river-sage", full_name="River Sage", first_name="River", last_name="Sage", position="F", birth_date=date(2090, 4, 4)),
             ),
         )
         serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
@@ -71,10 +71,10 @@ class FixtureTeamsProvider:
             revision=revision,
             loaded_at=loaded_at,
             rosters=(
-                FixtureRosterDTO(provider_roster_id="roster-redwood-ember-2099", provider_team_id="team-redwood", provider_player_id="player-ember", season="2099-00", competition_code="regular", snapshot_at="2099-01-02T00:00:00+00:00", roster_status=ember_status, jersey_number="7", listed_position="F"),
-                FixtureRosterDTO(provider_roster_id="roster-redwood-ash-2099", provider_team_id="team-redwood", provider_player_id="player-ash", season="2099-00", competition_code="regular", snapshot_at="2099-01-02T00:00:00+00:00", roster_status="active", jersey_number="12", listed_position="C"),
-                FixtureRosterDTO(provider_roster_id="roster-cinder-flint-2099", provider_team_id="team-cinder", provider_player_id="player-flint", season="2099-00", competition_code="regular", snapshot_at="2099-01-02T00:00:00+00:00", roster_status="active", jersey_number="3", listed_position="G"),
-                FixtureRosterDTO(provider_roster_id="roster-cinder-river-2099", provider_team_id="team-cinder", provider_player_id="player-river", season="2099-00", competition_code="regular", snapshot_at="2099-01-02T00:00:00+00:00", roster_status="active", jersey_number="21", listed_position="F"),
+                FixtureRosterDTO(provider_roster_id="roster-redwood-ember-2099", provider_team_id="team-redwood", provider_player_id="player-ember", season="2099-00", competition_code="regular", snapshot_at=datetime(2099, 1, 2, tzinfo=timezone.utc), roster_status=ember_status, jersey_number="7", listed_position="F"),
+                FixtureRosterDTO(provider_roster_id="roster-redwood-ash-2099", provider_team_id="team-redwood", provider_player_id="player-ash", season="2099-00", competition_code="regular", snapshot_at=datetime(2099, 1, 2, tzinfo=timezone.utc), roster_status="active", jersey_number="12", listed_position="C"),
+                FixtureRosterDTO(provider_roster_id="roster-cinder-flint-2099", provider_team_id="team-cinder", provider_player_id="player-flint", season="2099-00", competition_code="regular", snapshot_at=datetime(2099, 1, 2, tzinfo=timezone.utc), roster_status="active", jersey_number="3", listed_position="G"),
+                FixtureRosterDTO(provider_roster_id="roster-cinder-river-2099", provider_team_id="team-cinder", provider_player_id="player-river", season="2099-00", competition_code="regular", snapshot_at=datetime(2099, 1, 2, tzinfo=timezone.utc), roster_status="active", jersey_number="21", listed_position="F"),
             ),
         )
         serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
@@ -82,7 +82,7 @@ class FixtureTeamsProvider:
         records = tuple(
             NormalizedRosterEntry(
                 source=SourceMetadata(provider=self.name, external_id=roster.provider_roster_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version),
-                season=roster.season, competition_code=roster.competition_code, team_external_id=roster.provider_team_id,
+                season=roster.season, competition_code=CompetitionCode(roster.competition_code), team_external_id=roster.provider_team_id,
                 player_external_id=roster.provider_player_id, snapshot_at=roster.snapshot_at.isoformat(), jersey_number=roster.jersey_number,
                 listed_position=roster.listed_position, roster_status=roster.roster_status,
             )
