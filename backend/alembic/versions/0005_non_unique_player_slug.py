@@ -11,7 +11,7 @@ depends_on = None
 def upgrade() -> None:
     op.execute(sa.text("ALTER TABLE players DROP CONSTRAINT IF EXISTS players_slug_key"))
     op.execute(sa.text("ALTER TABLE players DROP CONSTRAINT IF EXISTS uq_players_slug"))
-    op.create_index("ix_players_slug", "players", ["slug"])
+    op.execute(sa.text("CREATE INDEX IF NOT EXISTS ix_players_slug ON players (slug)"))
     op.execute("INSERT INTO schema_versions (version) VALUES ('phase3b-player-roster-identity') ON CONFLICT (version) DO NOTHING")
 
 
