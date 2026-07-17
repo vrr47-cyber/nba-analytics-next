@@ -62,6 +62,10 @@ and real providers remain out of scope.
 
 Phase 7 is implemented on `phase-7-team-analytics` as the first user-facing vertical slice. The backend exposes publication-aware `/api/v1/teams` directory, detail, roster, recent-games, and trends routes using one shared aggregate metric registry. The frontend adds `/teams` and `/teams/:teamId` using the existing React Router and dark application shell. Metrics are derived from canonical final games and team box scores; no conference rank, shot profile, power model, live module, player detail page, or derived-metric table is included. Synthetic fixture samples may render in development with an unavoidable withheld-publication state and never create a release.
 
+## Phase 8 — Player Analytics vertical slice
+
+Phase 8 is implemented on `phase-8-player-analytics` with publication-aware `/api/v1/players` directory, detail, recent-games, trends, and splits routes plus `/players` and `/players/:playerId` frontend routes. Player metrics use aggregate numerators and denominators, separate games available from games played, exclude DNP rows from metric denominators while preserving them in logs, and expose current roster team separately from statistical team attribution. The directory is bounded at 100 results with validated filters and stable null-last ordering. No starter split is shown without completeness, no migration or transaction-history model is added, and synthetic samples remain visibly withheld.
+
 ## Phase 4 — shot analytics
 
 Add shot normalization, eligibility rules, shot profiles, expected-value modeling, and actual-versus-expected outputs. Keep the module withheld when coverage is insufficient.

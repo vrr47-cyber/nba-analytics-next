@@ -220,3 +220,13 @@ The first user-facing analytics milestone is a Team Analytics vertical slice rat
 Estimated possessions use `FGA + 0.44 × FTA − ORB + TOV`. Pace is a regulation-normalized estimate because canonical duration is not yet safe for overtime handling. Conference rank is not inferred from the fixture subset. No shot profile, power rating, forecast, live module, or player-detail route is part of this slice.
 
 Synthetic development responses may return recorded samples for truthful UI testing, but they always carry `synthetic=true`, `publishable=false`, and an explicit withheld reason. No release is created. No database migration or derived-metric table is added; query/service computation is sufficient for this milestone.
+
+## D-022 — Phase 8 player analytics semantics
+
+Status: Accepted for Phase 8
+
+Player analytics uses `player-analytics.v1` and aggregate numerator/denominator calculations. `games_available` counts final games with any canonical player-stat observation; `games_played` counts only valid `played` rows. DNP and other non-played observations remain in recent logs but do not enter metric denominators or rolling windows. Per-game values divide aggregate totals by games played; per-36 values divide aggregate totals by aggregate minutes and multiply by 36. Zero or unavailable denominators are null.
+
+Current team is derived only from the latest valid roster observation on or before the scope end date. Statistical team attribution is derived from player-game rows and is explicitly `single_team` or `multiple_teams`; no transaction order or history is inferred. Duplicate player appearances for one canonical game are blocked. Starter totals and starter/bench splits remain unavailable unless starter completeness is proven.
+
+The initial split set is home, away, wins, losses, last 5, last 10, and full recorded sample. The directory is bounded and validates position, scope, minimum, sort, and team filters. No migration, transaction-history table, player comparison, ranking, shot analytics, or unsupported biography data is added. Synthetic responses remain visible only in development/test with `publishable=false`.

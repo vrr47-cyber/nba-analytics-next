@@ -1,0 +1,2 @@
+import type { PlayerSummary } from "../../api/types";
+export function PlayerAttribution({ player }: { player: PlayerSummary }) { return <div className="player-attribution"><span>Current team: <strong>{player.current_team_name ?? "Unavailable"}</strong></span><span>Statistical scope: <strong>{player.team_attribution.state === "multiple_teams" ? `Multiple teams (${player.team_attribution.team_names.join(", ")})` : player.team_attribution.team_names[0] ?? "Unavailable"}</strong></span></div>; }

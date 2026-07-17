@@ -5,4 +5,6 @@ import { ExplorePage } from "../pages/ExplorePage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { TeamsPage } from "../pages/TeamsPage";
 import { TeamDetailPage } from "../pages/TeamDetailPage";
-export const router = createBrowserRouter([{ path: "/", element: <Layout />, children: [{ index: true, element: <ExplorePage /> }, { path: "teams", element: <TeamsPage /> }, { path: "teams/:teamId", element: <TeamDetailPage /> }, { path: "data-status", element: <DataStatusPage /> }, { path: "*", element: <NotFoundPage /> }] }]);
+import { PlayersPage } from "../pages/PlayersPage";
+import { PlayerDetailPage } from "../pages/PlayerDetailPage";
+export const router = createBrowserRouter([{ path: "/", element: <Layout />, children: [{ index: true, element: <ExplorePage /> }, { path: "teams", element: <TeamsPage /> }, { path: "teams/:teamId", element: <TeamDetailPage /> }, { path: "players", element: <PlayersPage /> }, { path: "players/:playerId", element: <PlayerDetailPage /> }, { path: "data-status", element: <DataStatusPage /> }, { path: "*", element: <NotFoundPage /> }] }]);
