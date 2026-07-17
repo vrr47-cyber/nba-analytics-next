@@ -214,7 +214,7 @@ class FixtureTeamsProvider:
 
     def load_shots(self, revision: str = "v1") -> tuple[tuple[NormalizedShot, ...], str, str, str, bool]:
         loaded_at = datetime(2099, 1, 20, tzinfo=timezone.utc)
-        raw = (
+        raw: tuple[FixtureShotDTO, ...] = (
             FixtureShotDTO(provider_shot_id="shot-redwood-1", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ember", period=1, clock="11:20", sequence_number=1, provider_x=4.0, provider_y=3.0, shot_distance=5.0, zone_code="paint", shot_type="two_point", result="made", point_value=2),
             FixtureShotDTO(provider_shot_id="shot-redwood-2", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ash", period=1, clock="09:10", sequence_number=2, provider_x=18.0, provider_y=2.0, shot_distance=18.1, zone_code="midrange", shot_type="two_point", result="missed", point_value=2),
             FixtureShotDTO(provider_shot_id="shot-redwood-3", provider_game_id="game-redwood-cinder-2099", provider_team_id="team-redwood", provider_player_id="player-ember", period=2, clock="06:30", sequence_number=3, provider_x=23.0, provider_y=1.0, shot_distance=23.0, zone_code="three", shot_type="three_point", result="made", point_value=3),
