@@ -256,3 +256,11 @@ Status: Accepted for Phase 10B
 Shot Analytics is a first-class frontend section at `/shots` with a player profile route at `/shots/players/:playerId`. It is a coverage-aware analytical view, not a scouting, ranking, or prediction surface. The UI composes the existing shot summary, player-shot, and zone APIs and uses the existing Player detail API only for player identity and team attribution; it does not introduce a second analytics service or duplicate metric formulas.
 
 The frontend renders normalized-coordinate charts only when coordinates exist, uses tables when they do not, and renders a zone heatmap only when the documented minimum of 20 attempts is met. Synthetic responses always display `Synthetic recorded sample — not publishable`; unavailable expected metrics remain `—`, and sparse or empty scopes are represented explicitly rather than filled with fabricated values.
+
+## D-026 — Phase 11 derived standings and Power Ordering
+
+Status: Accepted for Phase 11
+
+The public standings surface is derived exclusively from canonical final games that pass the existing eligibility checks. Provider standings snapshots remain separate source data and are not exposed as official or derived standings. The endpoint is `/api/v1/standings`; its `view` parameter is limited to `standings` and `power`.
+
+Recorded Standings order rows by deterministic recorded win percentage, wins, point differential, points for, and stable team identity tie-breakers. Power Ordering is not a composite rating and has no hidden weights: it orders the same rows by the existing Team Analytics `net_rating`, with deterministic recorded tie-breakers, and is explicitly labeled `Power Ordering (ordered by recorded Net Rating)`. No conference or division grouping is shown unless canonical structure metadata becomes available. The service requires an explicit season and competition scope, does not infer completeness, and always withholds synthetic, incomplete, inconsistent, stale, or unknown-coverage data. No migration, official standings API, seeding, playoff model, cache, or new rating formula is introduced.

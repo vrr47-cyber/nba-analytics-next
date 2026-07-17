@@ -82,6 +82,12 @@ Implemented on `phase-10-shot-analytics`. `/shots` provides scope selection, the
 
 No frontend metric formulas were added. Null expected FG and expected points render as `—`; coordinates are rendered only when supplied; heatmaps require at least 20 attempts and otherwise show an insufficient-data state. There are no rankings, comparisons, predictions, scouting reports, live data, caching, or schema changes.
 
+## Phase 11 — Standings & Power
+
+Phase 11 is implemented on `phase-11-standings-power`. The single `/api/v1/standings` route requires an explicit season and competition scope and accepts `view=standings` or `view=power`. It derives records only from canonical eligible final games, reuses Team Analytics metrics, and never exposes provider standings snapshots. Recorded Standings use deterministic win-percentage ordering with recorded tie-breakers. Power Ordering is not a new rating: it is the same rows ordered by existing recorded Net Rating.
+
+The `/standings` React/Vite page contains one coverage-aware table, a scope selector, a view toggle, and concise methodology text. Conference and division tabs/columns are omitted because canonical structure metadata is not available for this sample. Synthetic, incomplete, inconsistent, or unknown-coverage responses remain non-publishable. No migration, official standings, seeding, playoff odds, prediction model, cache, or frontend metric formula was added.
+
 ## Phase 5 — forecasts and models
 
 Add power rating, pre-game probability, playoff simulation, model registry, evaluation, calibration, and shadow inference. Publish only versioned, qualified outputs.
