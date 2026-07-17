@@ -177,6 +177,8 @@ class BoxScoreLine(BaseModel):
         for made, attempted in ((self.field_goals_made, self.field_goals_attempted), (self.three_pointers_made, self.three_pointers_attempted), (self.free_throws_made, self.free_throws_attempted)):
             if made > attempted:
                 raise ValueError("made values cannot exceed attempts")
+        if self.total_rebounds != self.offensive_rebounds + self.defensive_rebounds:
+            raise ValueError("total rebounds must equal offensive plus defensive rebounds")
         return self
 
 

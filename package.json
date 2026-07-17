@@ -26,6 +26,7 @@
     "teams:ingest": "python3 -m backend.app.jobs.ingest_teams",
     "players:rosters:ingest": "python3 -m backend.app.jobs.ingest_players_rosters",
     "games:ingest": "python3 -m backend.app.jobs.ingest_games",
+    "boxscores:ingest": "python3 -m backend.app.jobs.ingest_box_scores",
     "api:openapi": "python3 -m backend.app.openapi > backend/openapi.json",
     "api:check": "python3 scripts/check_openapi.py",
     "repo:check": "python3 scripts/check_repository_hygiene.py"

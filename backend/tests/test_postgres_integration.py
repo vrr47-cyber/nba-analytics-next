@@ -5,12 +5,13 @@ import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamProviderId
+from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerGameStats, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamGameStats, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository, RepositoryError
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY
 from backend.app.domain.player_roster_scope import ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY
 from backend.app.providers.registry import create_teams_provider
 from backend.app.services.bundle import import_validated_bundle, validate_bundle
+from backend.app.services.box_scores import BoxScoreIngestionError, ingest_box_score_reference, validate_box_score_reference
 from backend.app.services.games import GameStatusTransitionError, StructuralGameIdentityConflict, ingest_games_reference, validate_games_reference
 from backend.app.services.players import ingest_players_reference
 from backend.app.services.rosters import RosterIngestionError, ingest_rosters_reference
@@ -217,3 +218,45 @@ def test_game_ingestion_rejects_missing_team_and_structural_conflicts(postgres_e
                 ingest_games_reference(session, provider="fixture", games=(structural_conflict,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
             with pytest.raises(GameStatusTransitionError):
                 ingest_games_reference(session, provider="fixture", games=(games[0].model_copy(update={"status": "scheduled", "home_final_score": None, "away_final_score": None}),), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+
+
+def test_fixture_box_score_replay_correction_and_withholding(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league_payload, teams, team_schema, _, scope = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    players, player_schema, player_fingerprint, _ = provider.load_players("v1")
+    rosters, roster_schema, roster_fingerprint, _ = provider.load_rosters("v1")
+    games, game_schema, game_fingerprint, _ = provider.load_games("v2")
+    payload_v1, box_schema, box_fingerprint, _ = provider.load_box_score("v1")
+    payload_v2, _, box_fingerprint_v2, _ = provider.load_box_score("v2")
+    with Session(postgres_engine) as session:
+        with session.begin():
+            ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase5-setup", scope_policy=scope, synthetic=True)
+            league = session.scalar(select(League).where(League.code == "fixture-league"))
+            assert league is not None
+            season = session.scalar(select(Season).where(Season.league_id == league.id, Season.season_code == "2099-00"))
+            competition = session.scalar(select(Competition).where(Competition.league_id == league.id, Competition.code == "regular"))
+            assert season is not None and competition is not None
+            ingest_players_reference(session, provider="fixture", players=players, schema_version=player_schema, normalized_payload_fingerprint=player_fingerprint, synthetic=True)
+            ingest_rosters_reference(session, provider="fixture", rosters=rosters, schema_version=roster_schema, normalized_payload_fingerprint=roster_fingerprint, synthetic=True)
+            ingest_games_reference(session, provider="fixture", games=games, schema_version=game_schema, normalized_payload_fingerprint=game_fingerprint, synthetic=True)
+            first = ingest_box_score_reference(session, provider="fixture", payload=payload_v1, schema_version=box_schema, normalized_payload_fingerprint=box_fingerprint, synthetic=True)
+            assert first["team_counts"] == {"inserted": 2, "updated": 0, "unchanged": 0}
+            assert first["player_counts"] == {"inserted": 4, "updated": 0, "unchanged": 0}
+            assert first["publication_status"] == "withheld" and first["release_created"] is False
+            mapping_ids = {row.external_id: row.game_id for row in session.scalars(select(GameProviderId).where(GameProviderId.provider_name == "fixture"))}
+            validation = validate_box_score_reference(session, provider="fixture", payload=payload_v1)
+            replay = ingest_box_score_reference(session, provider="fixture", payload=payload_v1, schema_version=box_schema, normalized_payload_fingerprint=box_fingerprint, synthetic=True)
+            assert validation["mutated"] is False
+            assert replay["team_counts"] == {"inserted": 0, "updated": 0, "unchanged": 2}
+            assert replay["player_counts"] == {"inserted": 0, "updated": 0, "unchanged": 4}
+            with pytest.raises(BoxScoreIngestionError, match="requires correction mode"):
+                ingest_box_score_reference(session, provider="fixture", payload=payload_v2, schema_version=box_schema, normalized_payload_fingerprint=box_fingerprint_v2, synthetic=True)
+            corrected = ingest_box_score_reference(session, provider="fixture", payload=payload_v2, schema_version=box_schema, normalized_payload_fingerprint=box_fingerprint_v2, synthetic=True, correction_mode=True)
+            assert corrected["team_counts"] == {"inserted": 0, "updated": 0, "unchanged": 2}
+            assert corrected["player_counts"] == {"inserted": 0, "updated": 4, "unchanged": 0}
+            assert {row.external_id: row.game_id for row in session.scalars(select(GameProviderId).where(GameProviderId.provider_name == "fixture"))} == mapping_ids
+            game_id = mapping_ids["game-redwood-cinder-2099"]
+            assert session.query(TeamGameStats).filter(TeamGameStats.game_id == game_id).count() == 2
+            assert session.query(PlayerGameStats).filter(PlayerGameStats.game_id == game_id).count() == 4
+            assert session.query(DatasetRelease).filter(DatasetRelease.dataset_name.in_(["team_game_stats", "player_game_stats"])).count() == 0
+            assert all(row.publication_status == "withheld" for row in session.query(CoverageEvaluation).filter(CoverageEvaluation.dataset_name.in_(["team_game_stats", "player_game_stats"])).all())

@@ -30,6 +30,18 @@ Complete on `phase-4-game-schedule-ingestion`: provider-mapping-first canonical 
 
 Ingest and validate completed-game team/player summaries. Publish Explore, Teams, Players, standings, and power data only through the publication layer. Add explicit source/date/sample context.
 
+### Phase 5 — Box scores and player game statistics
+
+Phase 5A is implemented on `phase-5-box-score-ingestion` as a fixture-backed,
+provider-neutral boundary. The adapter returns a complete final-game payload;
+the service resolves existing game, team, and player mappings, validates all
+rows and aggregates before persistence, and writes team and player rows in one
+transaction. Exact replay is unchanged. Statistical or participation
+revisions require correction mode, while identity, mapping, final-game
+eligibility, roster resolution, duplicate detection, and invariants cannot be
+bypassed. Redis, live data, play-by-play, shots, models, APIs, frontend work,
+and releases are out of scope.
+
 ## Phase 4 — shot analytics
 
 Add shot normalization, eligibility rules, shot profiles, expected-value modeling, and actual-versus-expected outputs. Keep the module withheld when coverage is insufficient.

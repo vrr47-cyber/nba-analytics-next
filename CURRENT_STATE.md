@@ -36,6 +36,7 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - A generic league-provider identity mapping was added because Phase 2 had mappings for teams, players, and games but not leagues.
 - Phase 3B adds separate fixture-only player and roster ingestion services. Player identity uses provider mappings exclusively; no provider-independent canonical player key exists, so unmapped players are created rather than matched by name, slug, or biography. Roster rows are stable season/competition/team/player/snapshot memberships and update in place.
 - Phase 4 adds fixture-only provider-neutral game and schedule ingestion. Game identity uses existing provider game mappings; structural season, competition, and home/away team identity is immutable after mapping. Game date is derived from UTC scheduled tipoff, and all fixture coverage remains withheld.
+- Phase 5 adds fixture-only provider-neutral complete box-score ingestion. Team and player game-stat rows are validated before one atomic write, use existing provider mappings, enforce final-score and team/player point consistency, validate complete fixture roster observations, and remain withheld. No player-game uniqueness migration was added; the stronger `(game, player)` rule is enforced in the service.
 
 ## Not yet decided or approved
 

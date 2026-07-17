@@ -82,3 +82,46 @@ class FixtureGamesDTO(BaseModel):
     revision: str
     loaded_at: datetime
     games: tuple[FixtureGameDTO, ...]
+
+
+class FixtureTeamStatDTO(BaseModel):
+    provider_team_id: str = Field(min_length=1)
+    opponent_provider_team_id: str = Field(min_length=1)
+    home_away: str
+    result: str
+    minutes: str
+    points: int = Field(ge=0)
+    field_goals_made: int = Field(ge=0)
+    field_goals_attempted: int = Field(ge=0)
+    three_pointers_made: int = Field(ge=0)
+    three_pointers_attempted: int = Field(ge=0)
+    free_throws_made: int = Field(ge=0)
+    free_throws_attempted: int = Field(ge=0)
+    offensive_rebounds: int = Field(ge=0)
+    defensive_rebounds: int = Field(ge=0)
+    total_rebounds: int = Field(ge=0)
+    assists: int = Field(ge=0)
+    steals: int = Field(ge=0)
+    blocks: int = Field(ge=0)
+    turnovers: int = Field(ge=0)
+    personal_fouls: int = Field(ge=0)
+    plus_minus: int | None = None
+
+
+class FixturePlayerStatDTO(FixtureTeamStatDTO):
+    provider_player_id: str = Field(min_length=1)
+    starter: bool | None = None
+    participation_status: str
+    status_comment: str | None = None
+    player_minutes: str | None = None
+
+
+class FixtureBoxScoreDTO(BaseModel):
+    provider: str = "fixture"
+    schema_version: str
+    revision: str
+    loaded_at: datetime
+    provider_game_id: str = Field(min_length=1)
+    complete_roster_coverage: bool = True
+    team_stats: tuple[FixtureTeamStatDTO, ...]
+    player_stats: tuple[FixturePlayerStatDTO, ...]
