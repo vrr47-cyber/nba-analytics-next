@@ -211,10 +211,9 @@ def test_game_ingestion_rejects_missing_team_and_structural_conflicts(postgres_e
             missing_team = games[0].model_copy(update={"home_team_external_id": "team-not-mapped"})
             with pytest.raises(ValueError, match="missing canonical home team mapping"):
                 ingest_games_reference(session, provider="fixture", games=(missing_team,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
-            ingest_games_reference(session, provider="fixture", games=games, schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+            ingest_games_reference(session, provider="fixture", games=games_v2, schema_version=game_schema, normalized_payload_fingerprint=fingerprint_v2, synthetic=True)
             structural_conflict = games[0].model_copy(update={"home_team_external_id": "team-meadow"})
             with pytest.raises(StructuralGameIdentityConflict):
                 ingest_games_reference(session, provider="fixture", games=(structural_conflict,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
-            ingest_games_reference(session, provider="fixture", games=games_v2, schema_version=game_schema, normalized_payload_fingerprint=fingerprint_v2, synthetic=True)
             with pytest.raises(GameStatusTransitionError):
                 ingest_games_reference(session, provider="fixture", games=(games[0].model_copy(update={"status": "scheduled", "home_final_score": None, "away_final_score": None}),), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
