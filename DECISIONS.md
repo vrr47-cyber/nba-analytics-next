@@ -248,3 +248,11 @@ Canonical shot attempts are stored in `shots`; no duplicate identity tables are 
 Phase 10A accepts only complete fixture game payloads whose game, team, and player mappings already exist and whose game is final. Duplicate provider IDs, missing mappings, invalid classifications, incomplete payloads, and non-participant teams fail before domain persistence. Exact replay is unchanged; mutable shot corrections require correction mode. Synthetic source runs and coverage evaluations are always withheld and no dataset release is created.
 
 Expected FG is a deterministic, transparent lookup keyed by distance bucket and shot type. It is not derived from zones, does not use machine learning, and returns null until the configured observation threshold is met. Shot analytics APIs use the shared scope, coverage, provenance, and publication envelope and expose only bounded coordinate samples, not a raw shot archive. No frontend, live, caching, Redis, prediction, or model-training capability is part of Phase 10A.
+
+## D-025 — Phase 10B Shot Analytics product experience
+
+Status: Accepted for Phase 10B
+
+Shot Analytics is a first-class frontend section at `/shots` with a player profile route at `/shots/players/:playerId`. It is a coverage-aware analytical view, not a scouting, ranking, or prediction surface. The UI composes the existing shot summary, player-shot, and zone APIs and uses the existing Player detail API only for player identity and team attribution; it does not introduce a second analytics service or duplicate metric formulas.
+
+The frontend renders normalized-coordinate charts only when coordinates exist, uses tables when they do not, and renders a zone heatmap only when the documented minimum of 20 attempts is met. Synthetic responses always display `Synthetic recorded sample — not publishable`; unavailable expected metrics remain `—`, and sparse or empty scopes are represented explicitly rather than filled with fabricated values.

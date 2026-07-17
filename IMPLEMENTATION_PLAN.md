@@ -76,6 +76,12 @@ Implemented on `phase-10-shot-analytics` as an infrastructure-only milestone. Mi
 
 Reusable shot aggregation supports attempts, makes, FG%, 3PT%, eFG%, actual points, average distance, zone/type distributions, and bounded coordinates. Expected FG uses a transparent distance-bucket plus shot-type lookup and returns null below the qualification threshold; it does not use zones, machine learning, or synthetic training data. Publication-aware APIs are `/api/v1/shots/summary`, `/api/v1/shots/players/{player_id}`, and `/api/v1/shots/zones`. Frontend pages, visualizations, live ingestion, predictions, and raw-shot archive APIs remain out of scope.
 
+## Phase 10B — Shot Analytics frontend
+
+Implemented on `phase-10-shot-analytics`. `/shots` provides scope selection, the publication banner, metric cards, zone breakdown, shot-type distribution, heatmap qualification messaging, and methodology links. `/shots/players/:playerId` adds player identity and existing team attribution, a bounded normalized-coordinate shot chart, zone breakdown, shot-type distribution, and the same coverage-aware states. The frontend consumes the three shot APIs; the existing Player detail endpoint is used only to render the required identity and attribution.
+
+No frontend metric formulas were added. Null expected FG and expected points render as `—`; coordinates are rendered only when supplied; heatmaps require at least 20 attempts and otherwise show an insufficient-data state. There are no rankings, comparisons, predictions, scouting reports, live data, caching, or schema changes.
+
 ## Phase 5 — forecasts and models
 
 Add power rating, pre-game probability, playoff simulation, model registry, evaluation, calibration, and shadow inference. Publish only versioned, qualified outputs.
