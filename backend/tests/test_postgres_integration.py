@@ -274,6 +274,17 @@ def test_fixture_play_by_play_replay_reorder_correction_and_withholding(postgres
     payload_v2, _, pbp_fingerprint_v2, _ = provider.load_play_by_play("v2")
     with Session(postgres_engine) as session:
         with session.begin():
+            existing_game_mapping = session.scalar(select(GameProviderId).where(GameProviderId.provider_name == "fixture", GameProviderId.external_id == "game-redwood-cinder-2099"))
+            if existing_game_mapping is not None:
+                existing_game_id = existing_game_mapping.game_id
+                existing_events = list(session.scalars(select(PlayByPlayEvent).where(PlayByPlayEvent.game_id == existing_game_id, PlayByPlayEvent.provider_name == "fixture")))
+                if existing_events:
+                    existing_event_ids = [event.id for event in existing_events]
+                    session.query(PlayByPlayEventParticipant).filter(PlayByPlayEventParticipant.event_id.in_(existing_event_ids)).delete(synchronize_session=False)
+                    session.query(PlayByPlayEvent).filter(PlayByPlayEvent.id.in_(existing_event_ids)).delete(synchronize_session=False)
+                session.query(PlayerGameStats).filter(PlayerGameStats.game_id == existing_game_id).delete(synchronize_session=False)
+                session.query(TeamGameStats).filter(TeamGameStats.game_id == existing_game_id).delete(synchronize_session=False)
+                session.flush()
             ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase6-setup", scope_policy=scope, synthetic=True)
             league = session.scalar(select(League).where(League.code == "fixture-league"))
             assert league is not None
