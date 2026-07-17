@@ -4,9 +4,9 @@ import hashlib
 import json
 from datetime import date, datetime, timezone
 
-from backend.app.domain.canonical import CompetitionCode, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam, SourceMetadata
+from backend.app.domain.canonical import CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam, SourceMetadata
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY, TeamScopePolicy
-from backend.app.providers.dto import FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO
+from backend.app.providers.dto import FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO
 
 
 class FixtureTeamsProvider:
@@ -87,5 +87,34 @@ class FixtureTeamsProvider:
                 listed_position=roster.listed_position, roster_status=roster.roster_status,
             )
             for roster in payload.rosters
+        )
+        return records, payload.schema_version, fingerprint, payload.revision
+
+    def load_games(self, revision: str = "v1") -> tuple[tuple[NormalizedGame, ...], str, str, str]:
+        loaded_at = datetime.now(timezone.utc)
+        redwood_cinder_start = datetime(2099, 1, 10, 19, tzinfo=timezone.utc)
+        meadow_tide_start = datetime(2099, 1, 13 if revision == "v2" else 11, 19, tzinfo=timezone.utc)
+        payload = FixtureGamesDTO(
+            schema_version="fixture-games.v1",
+            revision=revision,
+            loaded_at=loaded_at,
+            games=(
+                FixtureGameDTO(provider_game_id="game-redwood-cinder-2099", season="2099-00", competition_code="regular", home_provider_team_id="team-redwood", away_provider_team_id="team-cinder", scheduled_start=redwood_cinder_start, status="final" if revision == "v2" else "scheduled", home_final_score=101 if revision == "v2" else None, away_final_score=99 if revision == "v2" else None),
+                FixtureGameDTO(provider_game_id="game-meadow-tide-2099", season="2099-00", competition_code="regular", home_provider_team_id="team-meadow", away_provider_team_id="team-tide", scheduled_start=meadow_tide_start, status="postponed"),
+                FixtureGameDTO(provider_game_id="game-redwood-meadow-2099", season="2099-00", competition_code="regular", home_provider_team_id="team-redwood", away_provider_team_id="team-meadow", scheduled_start=datetime(2099, 1, 12, 19, tzinfo=timezone.utc), status="final", home_final_score=100, away_final_score=95, neutral_site=True),
+            ),
+        )
+        serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
+        fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
+        records = tuple(
+            NormalizedGame(
+                source=SourceMetadata(provider=self.name, external_id=game.provider_game_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version),
+                season=game.season, competition_code=CompetitionCode(game.competition_code), scheduled_start=game.scheduled_start.isoformat(),
+                game_date=game.scheduled_start.astimezone(timezone.utc).date().isoformat(), home_team_external_id=game.home_provider_team_id,
+                away_team_external_id=game.away_provider_team_id, status=GameStatus(game.status), home_final_score=game.home_final_score,
+                away_final_score=game.away_final_score, neutral_site=game.neutral_site, official_external_url=game.official_external_url,
+                archival_external_url=game.archival_external_url,
+            )
+            for game in payload.games
         )
         return records, payload.schema_version, fingerprint, payload.revision

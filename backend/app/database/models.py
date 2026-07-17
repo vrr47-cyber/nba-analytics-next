@@ -153,7 +153,7 @@ class Game(TimestampedModel):
     season_id: Mapped[UUID] = mapped_column(ForeignKey("seasons.id"))
     competition_id: Mapped[UUID] = mapped_column(ForeignKey("competitions.id"))
     scheduled_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    game_date: Mapped[datetime] = mapped_column(Date)
+    game_date: Mapped[date] = mapped_column(Date)
     home_team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     away_team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     status: Mapped[str] = mapped_column(String(30))

@@ -125,3 +125,19 @@ and stable snapshot timestamp. Replays update provenance and report unchanged
 domain fields; changed fixture revisions update the same row. The existing
 `uq_roster_snapshot_membership` constraint supplies this idempotency because
 Phase 3B requires a non-null competition and stable snapshot timestamp.
+
+## D-018 — Phase 4 canonical game identity and lifecycle
+
+Status: Accepted for Phase 4
+
+The existing provider game mapping is authoritative. Once mapped, canonical
+season, competition, home team, and away team are immutable during normal or
+correction ingestion. Tipoff, UTC-derived game date, status, scores, neutral
+site, URLs, and source timestamps are mutable only under the game lifecycle
+rules. The existing `(provider_name, external_id)` game mapping uniqueness is
+the identity constraint; matchup/date uniqueness is intentionally not added.
+
+The supported lifecycle is scheduled, postponed, cancelled, and final. Final
+score corrections require correction mode. Final-to-non-final correction, when
+explicitly requested, clears both scores atomically. Fixture game runs create
+source runs and withheld coverage evaluations but never dataset releases.

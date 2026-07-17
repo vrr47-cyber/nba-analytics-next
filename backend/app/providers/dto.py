@@ -59,3 +59,26 @@ class FixtureRostersDTO(BaseModel):
     revision: str
     loaded_at: datetime
     rosters: tuple[FixtureRosterDTO, ...]
+
+
+class FixtureGameDTO(BaseModel):
+    provider_game_id: str = Field(min_length=1)
+    season: str
+    competition_code: str
+    home_provider_team_id: str = Field(min_length=1)
+    away_provider_team_id: str = Field(min_length=1)
+    scheduled_start: datetime
+    status: str
+    neutral_site: bool = False
+    home_final_score: int | None = Field(default=None, ge=0)
+    away_final_score: int | None = Field(default=None, ge=0)
+    official_external_url: str | None = None
+    archival_external_url: str | None = None
+
+
+class FixtureGamesDTO(BaseModel):
+    provider: str = "fixture"
+    schema_version: str
+    revision: str
+    loaded_at: datetime
+    games: tuple[FixtureGameDTO, ...]

@@ -24,6 +24,10 @@ Complete on `phase-3-provider-ingestion`: provider registry/factory, normalized 
 
 Complete on `phase-3-player-roster-ingestion`: separate player and roster services, deterministic revisioned fixture DTOs, provider-mapping-first player identity, required existing team/player mappings for rosters, stable season roster memberships, synthetic withholding, and removal of global player-slug uniqueness. No real provider, API, frontend, game, schedule, stats, or model work is included.
 
+### Phase 4 — Games and schedules
+
+Complete on `phase-4-game-schedule-ingestion`: provider-mapping-first canonical game ingestion, existing-team mapping resolution, explicit scheduled/postponed/cancelled/final transitions, UTC-derived game dates, deterministic fixture revisions, atomic batch validation, synthetic withholding, and no release workflow. No live state, play-by-play, box scores, models, API, frontend, or real provider work is included.
+
 Ingest and validate completed-game team/player summaries. Publish Explore, Teams, Players, standings, and power data only through the publication layer. Add explicit source/date/sample context.
 
 ## Phase 4 — shot analytics
