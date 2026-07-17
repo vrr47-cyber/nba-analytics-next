@@ -55,7 +55,7 @@ _LINE_FIELDS = (
     "blocks", "turnovers", "personal_fouls", "plus_minus",
 )
 _PLAYER_FIELDS = ("starter", "participation_status", "status_comment", "minutes", *_LINE_FIELDS)
-_TEAM_FIELDS = ("opponent_team_id", "home_away", "result", "minutes", *_LINE_FIELDS)
+_TEAM_FIELDS = ("home_away", "result", "minutes", *_LINE_FIELDS)
 
 
 def _parse_minutes(value: str | None, *, provider_player_id: str) -> int:
@@ -80,6 +80,18 @@ def _validate_participation(row: Any) -> None:
 
 def _line_values(row: Any, fields: tuple[str, ...]) -> dict[str, Any]:
     return {field: getattr(row, field) for field in fields}
+
+
+def _team_values(row: Any, opponent_id: UUID) -> dict[str, Any]:
+    return _line_values(row, _TEAM_FIELDS) | {"opponent_team_id": opponent_id}
+
+
+def _opponent_id(teams: dict[str, Team], row: Any) -> UUID:
+    return teams[row.opponent_external_id].id
+
+
+def _prepared_opponent_id(prepared: _Prepared, row: Any) -> UUID:
+    return next(team.id for candidate, team in prepared.teams if candidate.team_external_id == row.opponent_external_id)
 
 
 def _changed(existing: Any, values: dict[str, Any]) -> bool:
@@ -156,7 +168,7 @@ def _prepare(session: Session, *, provider: str, payload: NormalizedBoxScorePayl
     team_existing = tuple(session.scalar(select(TeamGameStats).where(TeamGameStats.game_id == game.id, TeamGameStats.team_id == resolved_teams[row.team_external_id].id)) for row in payload.team_stats)
     if not correction_mode:
         for team_existing_row, team_row in zip(team_existing, payload.team_stats, strict=True):
-            if team_existing_row is not None and _changed(team_existing_row, _line_values(team_row, _TEAM_FIELDS)):
+            if team_existing_row is not None and _changed(team_existing_row, _team_values(team_row, _opponent_id(resolved_teams, team_row))):
                 raise BoxScoreIngestionError("team-statistical correction requires correction mode")
     player_existing: list[PlayerGameStats | None] = []
     for _row, player, team in players:
@@ -197,7 +209,7 @@ def validate_box_score_reference(session: Session, *, provider: str, payload: No
 def _counts(prepared: _Prepared, payload: NormalizedBoxScorePayload) -> tuple[RowCounts, RowCounts]:
     team_inserted = team_updated = team_unchanged = 0
     for existing, (row, _) in zip(prepared.team_existing, prepared.teams, strict=True):
-        values = _line_values(row, _TEAM_FIELDS)
+        values = _team_values(row, _prepared_opponent_id(prepared, row))
         if existing is None:
             team_inserted += 1
         elif _changed(existing, values):
@@ -224,7 +236,7 @@ def ingest_box_score_reference(session: Session, *, provider: str, payload: Norm
     session.flush()
     try:
         for existing, (row, team) in zip(prepared.team_existing, prepared.teams, strict=True):
-            values = _line_values(row, _TEAM_FIELDS) | {"game_id": prepared.game.id, "team_id": team.id, "source_run_id": source_run.id, "source_updated_at": datetime.fromisoformat(row.source.source_updated_at) if row.source.source_updated_at else now}
+            values = _team_values(row, _prepared_opponent_id(prepared, row)) | {"game_id": prepared.game.id, "team_id": team.id, "source_run_id": source_run.id, "source_updated_at": datetime.fromisoformat(row.source.source_updated_at) if row.source.source_updated_at else now}
             if existing is None:
                 session.add(TeamGameStats(**values))
             else:
