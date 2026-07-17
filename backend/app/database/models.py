@@ -136,6 +136,12 @@ class TeamProviderId(ProviderIdentity):
     __table_args__ = (UniqueConstraint("provider_name", "external_id", name="uq_team_provider_external"),)
 
 
+class LeagueProviderId(ProviderIdentity):
+    __tablename__ = "league_provider_ids"
+    league_id: Mapped[UUID] = mapped_column(ForeignKey("leagues.id"))
+    __table_args__ = (UniqueConstraint("provider_name", "external_id", name="uq_league_provider_external"),)
+
+
 class PlayerProviderId(ProviderIdentity):
     __tablename__ = "player_provider_ids"
     player_id: Mapped[UUID] = mapped_column(ForeignKey("players.id"))

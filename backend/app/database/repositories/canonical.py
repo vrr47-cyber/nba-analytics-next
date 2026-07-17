@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.database.models import (
-    Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, Player, PlayerGameStats,
+    Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerGameStats,
     PlayerProviderId, RosterSnapshot, Season, StandingsSnapshot, Team,
     TeamGameStats, TeamProviderId, SourceRun,
 )
@@ -125,6 +125,17 @@ class ProviderIdentityRepository:
             existing.last_observed_at = observed_at
             return existing
         row = TeamProviderId(provider_name=provider, external_id=external_id, team_id=team_id, first_observed_at=observed_at, last_observed_at=observed_at)
+        self.session.add(row)
+        return row
+
+    def bind_league(self, provider: str, external_id: str, league_id: UUID, observed_at: datetime) -> LeagueProviderId:
+        existing = self.session.scalar(select(LeagueProviderId).where(LeagueProviderId.provider_name == provider, LeagueProviderId.external_id == external_id))
+        if existing and existing.league_id != league_id:
+            raise RepositoryError("provider league ID is already mapped to another canonical league")
+        if existing:
+            existing.last_observed_at = observed_at
+            return existing
+        row = LeagueProviderId(provider_name=provider, external_id=external_id, league_id=league_id, first_observed_at=observed_at, last_observed_at=observed_at)
         self.session.add(row)
         return row
 

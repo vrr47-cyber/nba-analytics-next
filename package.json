@@ -23,6 +23,7 @@
     "backend:typecheck": "python3 -m mypy backend/app",
     "db:migrate": "python3 -m alembic -c backend/alembic.ini upgrade head",
     "db:downgrade": "python3 -m alembic -c backend/alembic.ini downgrade -1",
+    "teams:ingest": "python3 -m backend.app.jobs.ingest_teams",
     "api:openapi": "python3 -m backend.app.openapi > backend/openapi.json",
     "api:check": "python3 scripts/check_openapi.py",
     "repo:check": "python3 scripts/check_repository_hygiene.py"
