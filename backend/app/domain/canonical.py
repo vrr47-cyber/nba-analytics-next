@@ -105,12 +105,14 @@ class NormalizedPlayer(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     position: str | None = None
+    active: bool = True
+    birth_date: str | None = None
 
 
 class NormalizedRosterEntry(BaseModel):
     source: SourceMetadata
     season: str
-    competition_code: CompetitionCode | None = None
+    competition_code: CompetitionCode
     team_external_id: str
     player_external_id: str
     snapshot_at: str
