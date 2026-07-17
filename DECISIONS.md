@@ -230,3 +230,11 @@ Player analytics uses `player-analytics.v1` and aggregate numerator/denominator 
 Current team is derived only from the latest valid roster observation on or before the scope end date. Statistical team attribution is derived from player-game rows and is explicitly `single_team` or `multiple_teams`; no transaction order or history is inferred. Duplicate player appearances for one canonical game are blocked. Starter totals and starter/bench splits remain unavailable unless starter completeness is proven.
 
 The initial split set is home, away, wins, losses, last 5, last 10, and full recorded sample. The directory is bounded and validates position, scope, minimum, sort, and team filters. No migration, transaction-history table, player comparison, ranking, shot analytics, or unsupported biography data is added. Synthetic responses remain visible only in development/test with `publishable=false`.
+
+## D-023 — Phase 9 Explore composition layer
+
+Status: Accepted for Phase 9
+
+Explore is a composition layer, not a third analytics subsystem. Featured teams and featured players are selected through the existing Team Analytics and Player Analytics services, with no duplicated formulas or new ranking semantics. A bounded `/api/v1/explore` endpoint is justified only because the existing team-specific recent-games endpoint cannot provide a global recent-games section without client-side N+1 requests. The endpoint composes existing analytics responses and performs only bounded final-game selection.
+
+The root `/` route remains the single Explore landing page. Featured cards are navigational summaries, never rankings or leaderboards. Explore remains compact and excludes AI summaries, power models, shot analytics, projections, playoff probabilities, live modules, caching, Redis, materialized tables, and migrations. Synthetic fixture responses remain visible only with `synthetic=true` and `publishable=false`.
