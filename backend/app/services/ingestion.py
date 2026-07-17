@@ -121,9 +121,10 @@ class IngestionService:
         written = 0
         identities = ProviderIdentityRepository(self.session)
         for record in batch.records:
-            existing = self.session.query(Player).filter_by(slug=record.slug).one_or_none()
+            mapping = self.session.query(PlayerProviderId).filter_by(provider_name=record.source.provider, external_id=record.source.external_id).one_or_none()
+            existing = self.session.get(Player, mapping.player_id) if mapping else None
             if existing is None:
-                existing = Player(slug=record.slug, full_name=record.full_name, first_name=record.first_name, last_name=record.last_name, position=record.position)
+                existing = Player(slug=record.slug, full_name=record.full_name, first_name=record.first_name, last_name=record.last_name, position=record.position, active=record.active, birth_date=datetime.fromisoformat(record.birth_date).date() if record.birth_date else None)
                 self.session.add(existing)
                 self.session.flush()
                 written += 1
@@ -132,6 +133,8 @@ class IngestionService:
                 existing.first_name = record.first_name
                 existing.last_name = record.last_name
                 existing.position = record.position
+                existing.active = record.active
+                existing.birth_date = datetime.fromisoformat(record.birth_date).date() if record.birth_date else None
             identities.bind_player(record.source.provider, record.source.external_id, existing.id, datetime.fromisoformat(record.source.retrieved_at))
         return written
 
@@ -140,11 +143,18 @@ class IngestionService:
         for record in batch.records:
             team = self.session.query(Team).join(TeamProviderId).filter(TeamProviderId.provider_name == record.source.provider, TeamProviderId.external_id == record.team_external_id).one()
             player = self.session.query(Player).join(PlayerProviderId).filter(PlayerProviderId.provider_name == record.source.provider, PlayerProviderId.external_id == record.player_external_id).one()
-            season = self.session.query(Season).filter_by(season_code=record.season).one()
-            existing = self.session.query(RosterSnapshot).filter_by(season_id=season.id, team_id=team.id, player_id=player.id, snapshot_at=datetime.fromisoformat(record.snapshot_at)).one_or_none()
+            season = self.session.query(Season).filter_by(league_id=team.league_id, season_code=record.season).one()
+            competition = self.session.query(Competition).filter_by(league_id=team.league_id, code=record.competition_code).one()
+            snapshot_at = datetime.fromisoformat(record.snapshot_at)
+            existing = self.session.query(RosterSnapshot).filter_by(season_id=season.id, competition_id=competition.id, team_id=team.id, player_id=player.id, snapshot_at=snapshot_at).one_or_none()
             if existing is None:
-                self.session.add(RosterSnapshot(season_id=season.id, team_id=team.id, player_id=player.id, snapshot_at=datetime.fromisoformat(record.snapshot_at), jersey_number=record.jersey_number, listed_position=record.listed_position, roster_status=record.roster_status, source_run_id=source_run_id))
+                self.session.add(RosterSnapshot(season_id=season.id, competition_id=competition.id, team_id=team.id, player_id=player.id, snapshot_at=snapshot_at, jersey_number=record.jersey_number, listed_position=record.listed_position, roster_status=record.roster_status, source_run_id=source_run_id))
                 written += 1
+            else:
+                existing.jersey_number = record.jersey_number
+                existing.listed_position = record.listed_position
+                existing.roster_status = record.roster_status
+                existing.source_run_id = source_run_id
         return written
 
     def _games(self, batch: IngestionBatch[NormalizedGame], source_run_id: UUID) -> int:
