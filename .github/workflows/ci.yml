@@ -12,6 +12,7 @@ jobs:
       - run: python -m ruff check backend
       - run: python -m mypy backend/app
       - run: python -m pytest backend/tests -m 'not integration'
+      - run: python -m backend.app.jobs.ingest_teams --provider fixture --validate-only --json
       - run: python -m backend.app.openapi > backend/openapi.json
       - run: python scripts/check_openapi.py
 

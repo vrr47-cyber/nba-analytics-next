@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import GameProviderId, League, PlayerProviderId, TeamProviderId
+from backend.app.database.models import GameProviderId, LeagueProviderId, PlayerProviderId, TeamProviderId
 
 
 class IdentityResolutionError(ValueError):
@@ -17,12 +17,10 @@ class IdentityResolver:
         self.session = session
 
     def league(self, provider: str, external_id: str) -> UUID:
-        # League mappings are represented by the stable provider metadata code until
-        # a dedicated league_provider_ids table is required by a licensed source.
-        row = self.session.scalar(select(League).where(League.code == external_id))
+        row = self.session.scalar(select(LeagueProviderId).where(LeagueProviderId.provider_name == provider, LeagueProviderId.external_id == external_id))
         if row is None:
             raise IdentityResolutionError(f"unresolved provider league reference: {provider}/{external_id}")
-        return row.id
+        return row.league_id
 
     def team(self, provider: str, external_id: str) -> UUID:
         row = self.session.scalar(select(TeamProviderId).where(TeamProviderId.provider_name == provider, TeamProviderId.external_id == external_id))
