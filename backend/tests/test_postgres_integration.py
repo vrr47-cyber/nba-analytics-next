@@ -196,6 +196,7 @@ def test_game_ingestion_rejects_missing_team_and_structural_conflicts(postgres_e
     provider = create_teams_provider("fixture")
     league_payload, teams, team_schema, _, _ = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
     games, game_schema, fingerprint, _ = provider.load_games("v1")
+    games_v2, _, fingerprint_v2, _ = provider.load_games("v2")
     with Session(postgres_engine) as session:
         with session.begin():
             ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase4-setup-errors", scope_policy=ACTIVE_TEAMS_FIXTURE_POLICY, synthetic=True)
@@ -214,5 +215,6 @@ def test_game_ingestion_rejects_missing_team_and_structural_conflicts(postgres_e
             structural_conflict = games[0].model_copy(update={"home_team_external_id": "team-meadow"})
             with pytest.raises(StructuralGameIdentityConflict):
                 ingest_games_reference(session, provider="fixture", games=(structural_conflict,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+            ingest_games_reference(session, provider="fixture", games=games_v2, schema_version=game_schema, normalized_payload_fingerprint=fingerprint_v2, synthetic=True)
             with pytest.raises(GameStatusTransitionError):
-                ingest_games_reference(session, provider="fixture", games=(games[2].model_copy(update={"status": "scheduled", "home_final_score": None, "away_final_score": None}),), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+                ingest_games_reference(session, provider="fixture", games=(games[0].model_copy(update={"status": "scheduled", "home_final_score": None, "away_final_score": None}),), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
