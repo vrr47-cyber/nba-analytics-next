@@ -210,3 +210,13 @@ canonical UUIDs. Removed events and participants are hard-deleted inside the
 atomic complete-snapshot correction transaction because the repository has no
 supersession model. Synthetic source runs and coverage evaluations remain
 withheld and no dataset release is created.
+
+## D-021 — Phase 7 team analytics vertical slice
+
+Status: Accepted for Phase 7
+
+The first user-facing analytics milestone is a Team Analytics vertical slice rather than another ingestion-only phase. Team directory and detail responses are query-derived from canonical final games and team box scores, use the shared publication envelope, and reuse one versioned aggregate metric registry (`team-analytics.v1`). Multi-game ratios and ratings use aggregated numerators and denominators; per-game percentages and ratings are never averaged.
+
+Estimated possessions use `FGA + 0.44 × FTA − ORB + TOV`. Pace is a regulation-normalized estimate because canonical duration is not yet safe for overtime handling. Conference rank is not inferred from the fixture subset. No shot profile, power rating, forecast, live module, or player-detail route is part of this slice.
+
+Synthetic development responses may return recorded samples for truthful UI testing, but they always carry `synthetic=true`, `publishable=false`, and an explicit withheld reason. No release is created. No database migration or derived-metric table is added; query/service computation is sufficient for this milestone.
