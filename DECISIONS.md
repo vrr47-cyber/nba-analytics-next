@@ -141,3 +141,37 @@ The supported lifecycle is scheduled, postponed, cancelled, and final. Final
 score corrections require correction mode. Final-to-non-final correction, when
 explicitly requested, clears both scores atomically. Fixture game runs create
 source runs and withheld coverage evaluations but never dataset releases.
+
+## D-019 — Phase 5 box-score identity and persistence
+
+Status: Accepted for Phase 5A
+
+Existing game, team, and player provider mappings remain authoritative. A
+provider game mapping identifies the canonical game; each stat row resolves a
+provider team or player mapping and cannot change canonical identity or team
+attribution, including in correction mode. The existing database constraint
+`(game_id, player_id, team_id)` is retained because repository-wide evidence
+does not yet justify a migration. The Phase 5 service enforces the stronger
+one-row-per-`(game_id, player_id)` invariant and rejects conflicting team rows
+before persistence.
+
+The complete fixture payload represents one final game with exactly two
+participant team rows and player rows belonging only to those teams. Team
+points must match the canonical final score, and player points must sum to the
+team points. DNP rows have null minutes and plus/minus and zero counting stats;
+played rows require a valid positive canonical minutes string. Rebound totals
+must balance offensive plus defensive rebounds; no broader speculative
+accounting checks are introduced.
+
+When complete roster coverage is declared, membership is checked against the
+latest `RosterSnapshot` for the same season, competition, and team whose
+`snapshot_at` is on or before the UTC-derived game date. The schema has no
+effective intervals, so this is an observation-based limitation, not inferred
+transaction history. Fixture source runs and coverage evaluations are always
+withheld and no dataset release is created.
+
+The first fixture revision is valid and synthetic; exact replay is unchanged.
+Revision v2 changes statistics and participation with stable identities and
+requires correction mode. Correction mode never bypasses payload validation,
+mapping resolution, final-game eligibility, roster validation, duplicate
+detection, or statistical invariants.

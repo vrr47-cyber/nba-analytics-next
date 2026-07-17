@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime, timezone
+from typing import Any
 
 from backend.app.domain.box_scores import NormalizedBoxScorePayload
 from backend.app.domain.canonical import BoxScoreLine, CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedPlayerGameStats, NormalizedRosterEntry, NormalizedTeam, NormalizedTeamGameStats, ParticipationStatus, SourceMetadata
@@ -140,7 +141,7 @@ class FixtureTeamsProvider:
         )
         serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
         fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
-        def line_kwargs(row: FixtureTeamStatDTO) -> dict[str, object]:
+        def line_kwargs(row: FixtureTeamStatDTO) -> dict[str, Any]:
             return {key: getattr(row, key) for key in BoxScoreLine.model_fields}
         teams = tuple(NormalizedTeamGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_team_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, team_external_id=row.provider_team_id, opponent_external_id=row.opponent_provider_team_id, home_away=row.home_away, result=row.result, minutes=row.minutes, **line_kwargs(row)) for row in payload.team_stats)
         players = tuple(NormalizedPlayerGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_player_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, player_external_id=row.provider_player_id, team_external_id=row.provider_team_id, starter=row.starter, participation_status=ParticipationStatus(row.participation_status), status_comment=row.status_comment, minutes=row.player_minutes, **line_kwargs(row)) for row in payload.player_stats)
