@@ -4,9 +4,10 @@ import hashlib
 import json
 from datetime import date, datetime, timezone
 
-from backend.app.domain.canonical import CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam, SourceMetadata
+from backend.app.domain.box_scores import NormalizedBoxScorePayload
+from backend.app.domain.canonical import BoxScoreLine, CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedPlayerGameStats, NormalizedRosterEntry, NormalizedTeam, NormalizedTeamGameStats, ParticipationStatus, SourceMetadata
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY, TeamScopePolicy
-from backend.app.providers.dto import FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO
+from backend.app.providers.dto import FixtureBoxScoreDTO, FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO, FixturePlayerStatDTO, FixtureTeamStatDTO
 
 
 class FixtureTeamsProvider:
@@ -118,3 +119,29 @@ class FixtureTeamsProvider:
             for game in payload.games
         )
         return records, payload.schema_version, fingerprint, payload.revision
+
+    def load_box_score(self, revision: str = "v1") -> tuple[NormalizedBoxScorePayload, str, str, str]:
+        loaded_at = datetime.now(timezone.utc)
+        river_status = "played" if revision == "v2" else "did_not_play"
+        river_minutes = "08:00" if revision == "v2" else None
+        payload = FixtureBoxScoreDTO(
+            schema_version="fixture-box-score.v1", revision=revision, loaded_at=loaded_at,
+            provider_game_id="game-redwood-cinder-2099", complete_roster_coverage=True,
+            team_stats=(
+                FixtureTeamStatDTO(provider_team_id="team-redwood", opponent_provider_team_id="team-cinder", home_away="home", result="W", minutes="48:00", points=101, field_goals_made=38, field_goals_attempted=85, three_pointers_made=12, three_pointers_attempted=35, free_throws_made=13, free_throws_attempted=17, offensive_rebounds=10, defensive_rebounds=30, total_rebounds=40, assists=24, steals=7, blocks=5, turnovers=11, personal_fouls=18, plus_minus=2),
+                FixtureTeamStatDTO(provider_team_id="team-cinder", opponent_provider_team_id="team-redwood", home_away="away", result="L", minutes="48:00", points=99, field_goals_made=37, field_goals_attempted=84, three_pointers_made=11, three_pointers_attempted=34, free_throws_made=14, free_throws_attempted=18, offensive_rebounds=9, defensive_rebounds=28, total_rebounds=37, assists=22, steals=6, blocks=4, turnovers=13, personal_fouls=20, plus_minus=-2),
+            ),
+            player_stats=(
+                FixturePlayerStatDTO(provider_team_id="team-redwood", opponent_provider_team_id="team-cinder", home_away="home", result="W", minutes="48:00", points=56 if revision == "v2" else 55, field_goals_made=20, field_goals_attempted=35, three_pointers_made=6, three_pointers_attempted=13, free_throws_made=10, free_throws_attempted=12, offensive_rebounds=3, defensive_rebounds=8, total_rebounds=11, assists=7, steals=2, blocks=1, turnovers=3, personal_fouls=2, plus_minus=4, provider_player_id="player-ember", starter=True, participation_status="played", player_minutes="35:00"),
+                FixturePlayerStatDTO(provider_team_id="team-redwood", opponent_provider_team_id="team-cinder", home_away="home", result="W", minutes="48:00", points=45 if revision == "v2" else 46, field_goals_made=18, field_goals_attempted=39, three_pointers_made=6, three_pointers_attempted=16, free_throws_made=3, free_throws_attempted=5, offensive_rebounds=7, defensive_rebounds=10, total_rebounds=17, assists=9, steals=1, blocks=2, turnovers=4, personal_fouls=3, plus_minus=-2, provider_player_id="player-ash", starter=False, participation_status="played", player_minutes="28:00"),
+                FixturePlayerStatDTO(provider_team_id="team-cinder", opponent_provider_team_id="team-redwood", home_away="away", result="L", minutes="48:00", points=94 if revision == "v2" else 99, field_goals_made=35, field_goals_attempted=78, three_pointers_made=10, three_pointers_attempted=30, free_throws_made=14, free_throws_attempted=18, offensive_rebounds=6, defensive_rebounds=16, total_rebounds=22, assists=12, steals=3, blocks=2, turnovers=8, personal_fouls=3, plus_minus=-1, provider_player_id="player-flint", starter=True, participation_status="played", player_minutes="37:00"),
+                FixturePlayerStatDTO(provider_team_id="team-cinder", opponent_provider_team_id="team-redwood", home_away="away", result="L", minutes="48:00", points=5 if revision == "v2" else 0, field_goals_made=2 if revision == "v2" else 0, field_goals_attempted=5 if revision == "v2" else 0, three_pointers_made=1 if revision == "v2" else 0, three_pointers_attempted=2 if revision == "v2" else 0, free_throws_made=0, free_throws_attempted=0, offensive_rebounds=1 if revision == "v2" else 0, defensive_rebounds=0, total_rebounds=1 if revision == "v2" else 0, assists=2 if revision == "v2" else 0, steals=1 if revision == "v2" else 0, blocks=0, turnovers=1 if revision == "v2" else 0, personal_fouls=1 if revision == "v2" else 0, plus_minus=0 if revision == "v2" else None, provider_player_id="player-river", starter=False, participation_status=river_status, status_comment=None if revision == "v2" else "coach decision", player_minutes=river_minutes),
+            ),
+        )
+        serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
+        fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
+        def line_kwargs(row: FixtureTeamStatDTO) -> dict[str, object]:
+            return {key: getattr(row, key) for key in BoxScoreLine.model_fields}
+        teams = tuple(NormalizedTeamGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_team_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, team_external_id=row.provider_team_id, opponent_external_id=row.opponent_provider_team_id, home_away=row.home_away, result=row.result, minutes=row.minutes, **line_kwargs(row)) for row in payload.team_stats)
+        players = tuple(NormalizedPlayerGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_player_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, player_external_id=row.provider_player_id, team_external_id=row.provider_team_id, starter=row.starter, participation_status=ParticipationStatus(row.participation_status), status_comment=row.status_comment, minutes=row.player_minutes, **line_kwargs(row)) for row in payload.player_stats)
+        return NormalizedBoxScorePayload(game_external_id=payload.provider_game_id, team_stats=teams, player_stats=players, complete_roster_coverage=payload.complete_roster_coverage), payload.schema_version, fingerprint, payload.revision
