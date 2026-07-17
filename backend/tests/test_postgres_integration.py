@@ -5,12 +5,13 @@ import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, League, LeagueProviderId, Player, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamProviderId
+from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository, RepositoryError
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY
 from backend.app.domain.player_roster_scope import ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY
 from backend.app.providers.registry import create_teams_provider
 from backend.app.services.bundle import import_validated_bundle, validate_bundle
+from backend.app.services.games import GameStatusTransitionError, StructuralGameIdentityConflict, ingest_games_reference, validate_games_reference
 from backend.app.services.players import ingest_players_reference
 from backend.app.services.rosters import RosterIngestionError, ingest_rosters_reference
 from backend.app.services.teams import ingest_teams_reference
@@ -150,3 +151,68 @@ def test_roster_ingestion_requires_existing_team_mapping(postgres_engine):
         with session.begin():
             with pytest.raises(RosterIngestionError, match="missing canonical team mapping"):
                 ingest_rosters_reference(session, provider=provider.name, rosters=(missing_team,), schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY, synthetic=True)
+
+
+def test_fixture_games_replay_revision_identity_and_withholding(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league_payload, teams, team_schema, _, _ = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    games_v1, game_schema, game_fingerprint_v1, _ = provider.load_games("v1")
+    games_v2, _, game_fingerprint_v2, _ = provider.load_games("v2")
+    with Session(postgres_engine) as session:
+        with session.begin():
+            ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase4-setup", scope_policy=ACTIVE_TEAMS_FIXTURE_POLICY, synthetic=True)
+            league = session.query(League).filter_by(code="fixture-league").one()
+            season = session.query(Season).filter_by(league_id=league.id, season_code="2099-00").one_or_none()
+            if season is None:
+                season = Season(league_id=league.id, season_code="2099-00", display_label="Fixture Season 2099-00", status="completed", is_current=False)
+                session.add(season)
+            competition = session.query(Competition).filter_by(league_id=league.id, code="regular").one_or_none()
+            if competition is None:
+                competition = Competition(league_id=league.id, code="regular", display_name="Fixture Regular", category="league")
+                session.add(competition)
+            session.flush()
+            first = ingest_games_reference(session, provider="fixture", games=games_v1, schema_version=game_schema, normalized_payload_fingerprint=game_fingerprint_v1, synthetic=True)
+            session.flush()
+            first_game_ids = {row.external_id: row.game_id for row in session.query(GameProviderId).filter_by(provider_name="fixture").all()}
+            replay_validation = validate_games_reference(session, provider="fixture", games=games_v1)
+            replay = ingest_games_reference(session, provider="fixture", games=games_v1, schema_version=game_schema, normalized_payload_fingerprint=game_fingerprint_v1, synthetic=True)
+            revised = ingest_games_reference(session, provider="fixture", games=games_v2, schema_version=game_schema, normalized_payload_fingerprint=game_fingerprint_v2, synthetic=True)
+            assert first["inserted"] == 3 and first["updated"] == 0 and first["unchanged"] == 0
+            assert replay["inserted"] == 0 and replay["updated"] == 0 and replay["unchanged"] == 3
+            assert revised["inserted"] == 0 and revised["updated"] == 2 and revised["unchanged"] == 1
+            assert replay_validation["mutated"] is False
+            assert {row.external_id: row.game_id for row in session.query(GameProviderId).filter_by(provider_name="fixture").all()} == first_game_ids
+            assert session.query(Game).join(Season).filter(Season.league_id == league.id, Game.competition_id == competition.id).count() == 3
+            updated_game = session.query(Game).filter_by(id=first_game_ids["game-redwood-cinder-2099"]).one()
+            assert updated_game.status == "final"
+            assert (updated_game.home_final_score, updated_game.away_final_score) == (101, 99)
+            moved_game = session.query(Game).filter_by(id=first_game_ids["game-meadow-tide-2099"]).one()
+            assert moved_game.scheduled_start.date().isoformat() == "2099-01-13"
+            assert session.query(DatasetRelease).filter_by(dataset_name="games").count() == 0
+            assert all(evaluation.publication_status == "withheld" for evaluation in session.query(CoverageEvaluation).filter_by(dataset_name="games").all())
+
+
+def test_game_ingestion_rejects_missing_team_and_structural_conflicts(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league_payload, teams, team_schema, _, _ = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    games, game_schema, fingerprint, _ = provider.load_games("v1")
+    with Session(postgres_engine) as session:
+        with session.begin():
+            ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase4-setup-errors", scope_policy=ACTIVE_TEAMS_FIXTURE_POLICY, synthetic=True)
+            league = session.query(League).filter_by(code="fixture-league").one()
+            season = session.query(Season).filter_by(league_id=league.id, season_code="2099-00").one_or_none()
+            if season is None:
+                session.add(Season(league_id=league.id, season_code="2099-00", display_label="Fixture Season 2099-00", status="completed", is_current=False))
+            competition = session.query(Competition).filter_by(league_id=league.id, code="regular").one_or_none()
+            if competition is None:
+                session.add(Competition(league_id=league.id, code="regular", display_name="Fixture Regular", category="league"))
+            session.flush()
+            missing_team = games[0].model_copy(update={"home_team_external_id": "team-not-mapped"})
+            with pytest.raises(ValueError, match="missing canonical home team mapping"):
+                ingest_games_reference(session, provider="fixture", games=(missing_team,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+            ingest_games_reference(session, provider="fixture", games=games, schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+            structural_conflict = games[0].model_copy(update={"home_team_external_id": "team-meadow"})
+            with pytest.raises(StructuralGameIdentityConflict):
+                ingest_games_reference(session, provider="fixture", games=(structural_conflict,), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
+            with pytest.raises(GameStatusTransitionError):
+                ingest_games_reference(session, provider="fixture", games=(games[2].model_copy(update={"status": "scheduled", "home_final_score": None, "away_final_score": None}),), schema_version=game_schema, normalized_payload_fingerprint=fingerprint, synthetic=True)
