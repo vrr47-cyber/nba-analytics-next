@@ -1,6 +1,6 @@
 # NBA Analytics Implementation Plan
 
-Status: Phase 6 — fixture-backed play-by-play ingestion complete
+Status: Phase 7 — Team Analytics vertical slice implemented locally
 
 ## Phase 0 — specifications and decisions
 
@@ -57,6 +57,10 @@ deleted as a complete-snapshot replacement because no supersession schema
 exists. Synthetic coverage is withheld and no release is created. Live
 polling, play-by-play APIs, possessions, lineups, shot coordinates, models,
 and real providers remain out of scope.
+
+## Phase 7 — Team Analytics vertical slice
+
+Phase 7 is implemented on `phase-7-team-analytics` as the first user-facing vertical slice. The backend exposes publication-aware `/api/v1/teams` directory, detail, roster, recent-games, and trends routes using one shared aggregate metric registry. The frontend adds `/teams` and `/teams/:teamId` using the existing React Router and dark application shell. Metrics are derived from canonical final games and team box scores; no conference rank, shot profile, power model, live module, player detail page, or derived-metric table is included. Synthetic fixture samples may render in development with an unavoidable withheld-publication state and never create a release.
 
 ## Phase 4 — shot analytics
 

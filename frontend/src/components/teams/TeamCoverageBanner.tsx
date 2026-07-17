@@ -1,0 +1,2 @@
+import type { Envelope } from "../../api/types";
+export function TeamCoverageBanner<T>({ response }: { response: Envelope<T> }) { return <div className={`team-banner ${response.publication.publishable ? "publishable" : "blocked"}`}><strong>{response.publication.publishable ? "Validated publication" : response.provenance.synthetic ? "Synthetic recorded sample — not publishable" : "Recorded sample — publication blocked"}</strong><span>{response.publication.reason}</span></div>; }

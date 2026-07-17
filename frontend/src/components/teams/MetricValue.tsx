@@ -1,0 +1,1 @@
+export function MetricValue({ value, percent = false }: { value: number | null; percent?: boolean }) { if (value === null || Number.isNaN(value)) return <span className="unavailable">—</span>; return <span>{percent ? `${(value * 100).toFixed(1)}%` : value.toFixed(1)}</span>; }

@@ -1,0 +1,16 @@
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { api } from "../api/client";
+import type { Envelope, TeamSummary } from "../api/types";
+import { ErrorState } from "../components/ErrorState";
+import { LoadingState } from "../components/LoadingState";
+import { TeamCoverageBanner } from "../components/teams/TeamCoverageBanner";
+import { MetricValue } from "../components/teams/MetricValue";
+
+export function TeamsPage() {
+  const [params, setParams] = useSearchParams(); const [response, setResponse] = useState<Envelope<TeamSummary[]> | null>(null); const [error, setError] = useState<string | null>(null);
+  const search = params.get("search") ?? ""; const sort = params.get("sort") ?? "name"; const direction = params.get("sort_direction") ?? "asc";
+  useEffect(() => { setResponse(null); setError(null); api.teams({ search, conference: params.get("conference") ?? undefined, season: params.get("season") ?? undefined, competition: params.get("competition") ?? undefined, sort, sort_direction: direction }).then(setResponse).catch((e: Error) => setError(e.message)); }, [search, sort, direction, params]);
+  const update = (key: string, value: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); setParams(next); };
+  return <section><div className="page-heading"><div><p className="eyebrow">Team analytics</p><h1>Teams</h1><p>Trustworthy team metrics with scope and coverage attached.</p></div></div><div className="filters"><input aria-label="Search teams" value={search} onChange={(e) => update("search", e.target.value)} placeholder="Search teams" /><select aria-label="Sort teams" value={sort} onChange={(e) => update("sort", e.target.value)}><option value="name">Team</option><option value="net_rating">Net Rating</option><option value="offensive_rating">ORtg</option><option value="defensive_rating">DRtg</option><option value="pace">Pace</option></select><button onClick={() => update("sort_direction", direction === "asc" ? "desc" : "asc")}>{direction === "asc" ? "Ascending" : "Descending"}</button></div>{!response && !error && <LoadingState />}{error && <ErrorState message={error} />}{response && <><TeamCoverageBanner response={response} />{response.data.length === 0 ? <div className="empty"><h2>No teams in this scope</h2><p>Try a different search or scope.</p></div> : <div className="table-wrap"><table><thead><tr><th>Team</th><th>Record</th><th>ORtg</th><th>DRtg</th><th>Net</th><th>Pace</th><th>eFG%</th><th>Last 10</th></tr></thead><tbody>{response.data.map((team) => <tr key={team.id}><td><Link to={`/teams/${team.id}`}>{team.name} <small>{team.abbreviation}</small></Link></td><td>{team.metrics.wins}-{team.metrics.losses}</td><td><MetricValue value={team.metrics.offensive_rating} /></td><td><MetricValue value={team.metrics.defensive_rating} /></td><td><MetricValue value={team.metrics.net_rating} /></td><td><MetricValue value={team.metrics.pace} /></td><td><MetricValue value={team.metrics.effective_fg_percentage} percent /></td><td>{team.metrics.last_10_wins}-{team.metrics.last_10_losses} <small>({team.metrics.last_10_sample_size})</small></td></tr>)}</tbody></table></div>}</>}</section>;
+}

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api import health, meta, status
+from backend.app.api import health, meta, status, teams
 from backend.app.core.config import get_settings
 from backend.app.core.errors import application_error_handler
 from backend.app.core.logging import configure_logging
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(status.router)
     app.include_router(meta.router)
+    app.include_router(teams.router)
     return app
 
 
