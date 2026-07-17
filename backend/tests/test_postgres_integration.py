@@ -5,9 +5,12 @@ import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import League, Team, TeamProviderId
+from backend.app.database.models import CoverageEvaluation, DatasetRelease, League, LeagueProviderId, SourceRun, Team, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository, RepositoryError
+from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY
+from backend.app.providers.registry import create_teams_provider
 from backend.app.services.bundle import import_validated_bundle, validate_bundle
+from backend.app.services.teams import ingest_teams_reference
 
 pytestmark = pytest.mark.integration
 
@@ -62,3 +65,23 @@ def test_synthetic_bundle_import_release_is_withheld(postgres_engine):
         with session.begin():
             result = import_validated_bundle(bundle, session)
             assert result["publication_status"] == "withheld"
+
+
+def test_fixture_teams_ingestion_is_idempotent_and_withheld(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league, teams, schema_version, fingerprint, scope = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    with Session(postgres_engine) as session:
+        with session.begin():
+            first = ingest_teams_reference(session, provider=provider.name, league=league, teams=teams, schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=scope, synthetic=provider.synthetic)
+            second = ingest_teams_reference(session, provider=provider.name, league=league, teams=teams, schema_version=schema_version, normalized_payload_fingerprint=fingerprint, scope_policy=scope, synthetic=provider.synthetic)
+            assert first["publication_status"] == second["publication_status"] == "withheld"
+            assert first["rows_written"] == 4
+            assert second["rows_written"] == 0
+        assert session.query(Team).filter(Team.slug.in_(["redwood", "cinder", "meadow", "tide"])).count() == 4
+        assert session.query(TeamProviderId).filter_by(provider_name="fixture").count() == 4
+        assert session.query(LeagueProviderId).filter_by(provider_name="fixture", external_id="fixture-league").count() == 1
+        runs = session.query(SourceRun).filter_by(provider_name="fixture").all()
+        assert {run.metadata_json["normalized_payload_fingerprint"] for run in runs} >= {fingerprint}
+        evaluations = session.query(CoverageEvaluation).filter_by(dataset_name="teams").all()
+        assert all(evaluation.publication_status == "withheld" for evaluation in evaluations)
+        assert session.query(DatasetRelease).filter_by(dataset_name="teams").count() == 0

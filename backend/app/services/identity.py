@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import GameProviderId, League, LeagueProviderId, PlayerProviderId, TeamProviderId
+from backend.app.database.models import GameProviderId, LeagueProviderId, PlayerProviderId, TeamProviderId
 
 
 class IdentityResolutionError(ValueError):

@@ -30,7 +30,7 @@ class FixtureTeamsProvider:
                 FixtureTeamDTO(provider_team_id="team-tide", slug="tide", full_name="Tide", short_name="Tide", abbreviation="TDE"),
             ),
         )
-        serialized = json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
         fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
         league_source = SourceMetadata(provider=self.name, external_id=payload.provider_league_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version)
         league = NormalizedLeague(source=league_source, code=payload.league_code, display_name=payload.league_name)

@@ -1,6 +1,6 @@
 # NBA Analytics Implementation Plan
 
-Status: Phase 0 — sequencing plan
+Status: Phase 3A — fixture-backed provider boundary complete
 
 ## Phase 0 — specifications and decisions
 
@@ -15,6 +15,10 @@ Complete: target monorepo directories, Python project metadata, React/Vite front
 Phase 2A/2B complete locally: canonical entities, provider mappings, normalized batches, source-run lifecycle, repositories, ingestion boundaries, coverage contracts, manifest-driven JSONL validation, and synthetic fixtures. PostgreSQL execution remains pending because Docker is unavailable. No truth provider, real data, or public entity endpoints.
 
 ## Phase 3 — completed-game analytics
+
+### Phase 3A — Teams provider boundary
+
+Complete on `phase-3-provider-ingestion`: provider registry/factory, normalized fixture DTOs, a deterministic fictional Teams adapter, versioned active-team scope policy, source-run provenance, coverage evaluation, provider-ID identity binding, and a PostgreSQL migration for generic league-provider mappings. No network calls, credentials, real NBA data, releases, frontend changes, or publication are included.
 
 Ingest and validate completed-game team/player summaries. Publish Explore, Teams, Players, standings, and power data only through the publication layer. Add explicit source/date/sample context.
 

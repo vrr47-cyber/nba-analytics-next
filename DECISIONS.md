@@ -93,3 +93,18 @@ Status: Accepted
 Future licensed exports enter through a versioned manifest and checksum-verified
 JSONL bundle. Synthetic bundles require explicit test-mode permission and can
 never create a publishable release.
+
+## D-016 — Phase 3A fixture-backed Teams boundary
+
+Status: Accepted for Phase 3A
+
+Phase 3A implements only a deterministic fictional Teams provider behind a
+registry/factory. It requires no paid provider, account, credentials, or
+network call. Teams ingestion records a source run and coverage evaluation,
+but does not create a dataset release; all Teams-only publication remains
+withheld. The expected active-team population is owned by a versioned scope
+policy, and provider mappings are authoritative for identity.
+
+Phase 2 had no generic league-provider mapping, so Phase 3A adds that minimal
+identity migration. No other Phase 3 dataset or live/model capability is
+included.
