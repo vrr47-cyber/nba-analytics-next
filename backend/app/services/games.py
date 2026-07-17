@@ -137,6 +137,7 @@ def ingest_games_reference(
     loaded_at = datetime.now(timezone.utc)
     source_run = SourceRun(id=uuid4(), provider_name=provider, status="running", started_at=loaded_at, metadata_json={"operation": "games", "load_timestamp": loaded_at.isoformat(), "schema_version": schema_version, "record_count": len(games), "normalized_payload_fingerprint": normalized_payload_fingerprint, "scope_policy_version": scope_policy.policy_version, "synthetic": synthetic})
     session.add(source_run)
+    session.flush()
     try:
         inserted = updated = unchanged = 0
         identities = ProviderIdentityRepository(session)
