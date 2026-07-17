@@ -5,6 +5,7 @@ from typing import Protocol
 
 from backend.app.domain.box_scores import NormalizedBoxScorePayload
 from backend.app.domain.play_by_play import NormalizedPlayByPlayPayload
+from backend.app.domain.shots import NormalizedShot
 from backend.app.domain.canonical import NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam
 from backend.app.domain.team_scope import TeamScopePolicy
 from backend.app.providers.fixture import FixtureTeamsProvider
@@ -29,6 +30,8 @@ class TeamsProvider(Protocol):
     def load_box_score(self, revision: str = "v1") -> tuple[NormalizedBoxScorePayload, str, str, str]: ...
 
     def load_play_by_play(self, revision: str = "v1") -> tuple[NormalizedPlayByPlayPayload, str, str, str]: ...
+
+    def load_shots(self, revision: str = "v1") -> tuple[tuple[NormalizedShot, ...], str, str, str, bool]: ...
 
 
 class ProviderRegistry:

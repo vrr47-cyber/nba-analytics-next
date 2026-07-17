@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.database.models import (
     Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerGameStats,
     PlayerProviderId, RosterSnapshot, Season, StandingsSnapshot, Team,
-    TeamGameStats, TeamProviderId, SourceRun,
+    TeamGameStats, TeamProviderId, SourceRun, Shot,
 )
 
 
@@ -108,6 +108,23 @@ class SourceRunRepository(_Repository[SourceRun]):
 
 class DatasetReleaseRepository(_Repository[DatasetRelease]):
     model = DatasetRelease
+
+
+class ShotRepository(_Repository[Shot]):
+    model = Shot
+
+    def for_game(self, game_id: UUID) -> list[Shot]:
+        return list(self.session.scalars(select(Shot).where(Shot.game_id == game_id).order_by(Shot.sequence_number, Shot.provider_shot_id)))
+
+    def for_scope(self, *, game_ids: set[UUID] | None = None, player_id: UUID | None = None, team_id: UUID | None = None) -> list[Shot]:
+        query = select(Shot)
+        if game_ids is not None:
+            query = query.where(Shot.game_id.in_(game_ids))
+        if player_id is not None:
+            query = query.where(Shot.player_id == player_id)
+        if team_id is not None:
+            query = query.where(Shot.team_id == team_id)
+        return list(self.session.scalars(query.order_by(Shot.game_id, Shot.sequence_number, Shot.provider_shot_id)))
 
 
 class ProviderIdentityRepository:

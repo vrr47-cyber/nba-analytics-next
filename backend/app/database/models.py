@@ -283,6 +283,44 @@ class PlayByPlayEventParticipant(TimestampedModel):
     )
 
 
+class Shot(TimestampedModel):
+    __tablename__ = "shots"
+    game_id: Mapped[UUID] = mapped_column(ForeignKey("games.id"))
+    team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
+    player_id: Mapped[UUID] = mapped_column(ForeignKey("players.id"))
+    provider_name: Mapped[str] = mapped_column(String(100))
+    provider_shot_id: Mapped[str] = mapped_column(String(150))
+    period: Mapped[int] = mapped_column(Integer)
+    clock: Mapped[str] = mapped_column(String(20))
+    sequence_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    provider_x: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
+    provider_y: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
+    normalized_x: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
+    normalized_y: Mapped[float | None] = mapped_column(Numeric(10, 4), nullable=True)
+    shot_distance: Mapped[float | None] = mapped_column(Numeric(8, 3), nullable=True)
+    zone_version: Mapped[str] = mapped_column(String(50))
+    zone_code: Mapped[str] = mapped_column(String(50))
+    shot_type: Mapped[str] = mapped_column(String(30))
+    result: Mapped[str] = mapped_column(String(20))
+    point_value: Mapped[int] = mapped_column(Integer)
+    source_run_id: Mapped[UUID] = mapped_column(ForeignKey("source_runs.id"))
+    __table_args__ = (
+        UniqueConstraint("provider_name", "game_id", "provider_shot_id", name="uq_shot_provider_identity"),
+        Index("ix_shots_game_sequence", "game_id", "sequence_number"),
+        Index("ix_shots_player_game", "player_id", "game_id"),
+        Index("ix_shots_team_game", "team_id", "game_id"),
+        Index("ix_shots_zone", "zone_version", "zone_code"),
+        CheckConstraint("period > 0", name="ck_shots_period_positive"),
+        CheckConstraint("sequence_number IS NULL OR sequence_number >= 0", name="ck_shots_sequence_nonnegative"),
+        CheckConstraint("shot_distance IS NULL OR shot_distance >= 0", name="ck_shots_distance_nonnegative"),
+        CheckConstraint("provider_x IS NULL OR provider_y IS NOT NULL", name="ck_shots_provider_coordinates_pair"),
+        CheckConstraint("provider_y IS NULL OR provider_x IS NOT NULL", name="ck_shots_provider_coordinates_pair_y"),
+        CheckConstraint("normalized_x IS NULL OR normalized_y IS NOT NULL", name="ck_shots_normalized_coordinates_pair"),
+        CheckConstraint("normalized_y IS NULL OR normalized_x IS NOT NULL", name="ck_shots_normalized_coordinates_pair_y"),
+        CheckConstraint("point_value IN (0, 1, 2, 3)", name="ck_shots_point_value"),
+    )
+
+
 class StandingsSnapshot(TimestampedModel):
     __tablename__ = "standings_snapshots"
     season_id: Mapped[UUID] = mapped_column(ForeignKey("seasons.id"))
