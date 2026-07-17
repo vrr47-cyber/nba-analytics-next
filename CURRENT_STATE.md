@@ -13,7 +13,9 @@ As of 2026-07-16
 
 Phase 1 foundation is implemented. No production analytics data pipeline or model exists. The visual prototype is not a source of truth for metrics, architecture, or production technology.
 
-The backend exposes process health, database/provider readiness, truthful status, and an empty seasons envelope. The frontend is a small React/Vite shell with Explore and Data Status routes. PostgreSQL migrations create only foundation metadata tables; no NBA domain tables or provider adapters exist yet.
+Phase 2A/2B is implemented locally on `phase-2-data-foundation`: canonical entity models, provider-ID mappings, normalized ingestion contracts, transactional writers, bundle validation/import, and coverage evaluation contracts are present. No real data or provider integration exists.
+
+The backend exposes process health, database/provider readiness, truthful status, and an empty seasons envelope. The frontend is a small React/Vite shell with Explore and Data Status routes. Phase 2B adds canonical repositories, ingestion boundaries, and a manifest-driven JSONL validator; no NBA data or provider adapter exists.
 
 ## Prototype status
 
@@ -40,4 +42,4 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - Authentication and access policy.
 - Production domains and deployment environment.
 - Model features, training data, and evaluation thresholds.
-- Phase 2 field-level canonical entity schema and ingestion contracts.
+- PostgreSQL execution of the Phase 2A/2B migrations and repository integration is configured in GitHub Actions; local execution is pending because Docker and the PostgreSQL client are unavailable.

@@ -1,0 +1,28 @@
+{
+  "format_version": "1",
+  "dataset_name": "synthetic-canonical-fixture",
+  "dataset_version": "0.1.0",
+  "provider": "synthetic-fixture",
+  "generated_at": "2099-01-05T00:00:00+00:00",
+  "league_scope": ["aurora-fixture"],
+  "season_scope": ["2099-00"],
+  "competition_scope": ["regular"],
+  "files": [
+    {"path":"leagues.jsonl","rows":1,"sha256":"878cbd82176a46f43548a1c0617106fd9c389535af680970e19ebf9ffa734b21","schema_fingerprint":"phase2a-league-v1"},
+    {"path":"seasons.jsonl","rows":1,"sha256":"4ff03a19c6dffefbba76659dba8abd6cbdfe4bfbf8fa117c7b7dd905784479b1","schema_fingerprint":"phase2a-season-v1"},
+    {"path":"competitions.jsonl","rows":1,"sha256":"cde0b4890188f5a6b00fce8fd128c7cc24da88c98b0c4f410eac459c3a7d983b","schema_fingerprint":"phase2a-competition-v1"},
+    {"path":"teams.jsonl","rows":4,"sha256":"f7d8c2ec585f9398acd4529e5b9a0260f91d41430eafa8d21d4ca3977dda0f01","schema_fingerprint":"phase2a-team-v1"},
+    {"path":"players.jsonl","rows":1,"sha256":"04ccadee4758fb0c3107fed610fee6813799cd5ccab4d67033c261bf06d941f3","schema_fingerprint":"phase2a-player-v1"},
+    {"path":"rosters.jsonl","rows":1,"sha256":"3b6293806f4f8b5562bc2ecaf9de0e71af10c4abdd62a558915ff3c5755007f4","schema_fingerprint":"phase2a-roster-v1"},
+    {"path":"games.jsonl","rows":2,"sha256":"f90fa0f67525e70ccc87bd1d2a7dcde73651498bb45fa50c76d887d87c636f2e","schema_fingerprint":"phase2a-game-v1"},
+    {"path":"team_game_stats.jsonl","rows":1,"sha256":"15e96a7144a1e301c11cf01b4c6bd5de656508617bfc962d35b52b1b36fcf953","schema_fingerprint":"phase2a-team-stats-v1"},
+    {"path":"player_game_stats.jsonl","rows":1,"sha256":"3b5e6919c1d66a1b16456590a502367f0ca2aefaa5f82ec3263ff1844c190903","schema_fingerprint":"phase2a-player-stats-v1"},
+    {"path":"standings.jsonl","rows":1,"sha256":"7105ff8f4c4de275fc6fba6fee20cc9895950e1f1e9d635d9a9730b08f7693c4","schema_fingerprint":"phase2a-standings-v1"}
+  ],
+  "expected_entities": null,
+  "expected_games": null,
+  "synthetic": true,
+  "license_reference": "synthetic test fixture; no redistribution rights implied",
+  "warnings": ["Synthetic fixture is never publication-ready."],
+  "generating_tool_version": "phase2b-fixture-1"
+}

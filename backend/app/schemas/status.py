@@ -27,3 +27,6 @@ class StatusResponse(BaseModel):
     latest_successful_source_run: datetime | None = None
     publication_ready: bool
     publication_reason: str
+    canonical_schema_ready: bool = False
+    dataset_release_count: int = 0
+    latest_coverage_evaluation: str | None = None

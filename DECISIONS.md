@@ -73,3 +73,23 @@ Policy B is used for Phase 1: OpenAPI is generated from FastAPI during checks an
 Status: Accepted
 
 Synthetic fixtures are explicitly opt-in, use invented names, carry synthetic and non-publishable markers, and are unavailable in production. No realistic NBA placeholder statistics are permitted outside `design-prototype`.
+
+## D-013 — Canonical observations are append-preserving
+
+Status: Accepted
+
+Roster membership and standings are observations. New snapshots are added; absence does not invent transactions, and standings snapshots are not overwritten. Games may progress from scheduled to final, while final participant identity cannot silently regress.
+
+## D-014 — Phase 2A does not imply publication readiness
+
+Status: Accepted
+
+Canonical schema readiness, a source run, or a complete-looking count does not publish a dataset. Coverage, consistency, freshness, truth validation, and synthetic-data policy remain explicit publication gates.
+
+## D-015 — Offline bundles are provider-neutral JSONL
+
+Status: Accepted
+
+Future licensed exports enter through a versioned manifest and checksum-verified
+JSONL bundle. Synthetic bundles require explicit test-mode permission and can
+never create a publishable release.

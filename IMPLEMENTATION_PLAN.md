@@ -12,7 +12,7 @@ Complete: target monorepo directories, Python project metadata, React/Vite front
 
 ## Phase 2 — canonical entities and coverage
 
-Implement teams, players, seasons, competitions, rosters, source snapshots, ingestion batches, coverage records, and publication gates. Add truth fixtures and data-quality reports before public metrics.
+Phase 2A/2B complete locally: canonical entities, provider mappings, normalized batches, source-run lifecycle, repositories, ingestion boundaries, coverage contracts, manifest-driven JSONL validation, and synthetic fixtures. PostgreSQL execution remains pending because Docker is unavailable. No truth provider, real data, or public entity endpoints.
 
 ## Phase 3 — completed-game analytics
 

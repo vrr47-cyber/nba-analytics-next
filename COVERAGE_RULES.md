@@ -54,3 +54,15 @@ Before a batch is public:
 ## User-facing coverage panel
 
 Explore and relevant detail pages must expose team-game coverage, player-game coverage, roster coverage, shot coverage, standings freshness, forecast status, and live-provider status. The panel explains blocked or partial states in plain language.
+# Phase 2A coverage contracts
+
+Coverage evaluation is a first-class canonical record. Evaluators accept an
+observed count, optional expected count, missing and duplicate identifiers,
+inconsistent records, source freshness, and a policy version. The ratio is null
+when the denominator is unknown. `partial`, `unknown`, `empty`, `inconsistent`,
+`stale`, and `failed_validation` are withheld by default; only complete data
+without blockers can receive a publishable recommendation.
+
+The contract supports schedule, final results, team and player box scores,
+roster snapshots, standings snapshots, and entity populations. Phase 2A does
+not set final production numeric thresholds for rankings or leaderboards.

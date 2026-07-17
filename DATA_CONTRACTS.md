@@ -83,3 +83,32 @@ The live endpoint may return current score, clock, period, normalized state, pre
 ## Versioning
 
 Breaking changes require a new contract version and compatibility window. Source schema changes, metric formula changes, qualification changes, and model changes are independently versioned and recorded in provenance.
+# Phase 2A canonical data contracts
+
+Canonical identifiers are internal UUIDs. Provider identifiers are stored in
+separate provider mapping tables and never become canonical keys. Seasons use
+one shared `YYYY-YY` validator; competitions are structural metadata and are
+recognized as `regular`, `playoffs`, `preseason`, or `summer_league` without
+implying that validated data exists for each category.
+
+Persistent entities are leagues, seasons, competitions, teams, players, roster
+snapshots, games, team/player final-game statistics, standings snapshots, and
+coverage evaluations. Games deliberately contain schedule and final-result
+state only: live score, period, clock, possession, and play-by-play are absent.
+Roster snapshots preserve observations; absence does not invent a departure or
+transaction date. Standings are timestamped snapshots, never overwritten.
+
+Normalized provider records are in `backend/app/domain/canonical.py` and use
+provider-neutral names plus source metadata. Missing optional fields remain
+null. DNP is represented by `participation_status`, not by a played row with
+zero minutes. Shot and live-state records are intentionally absent in Phase 2A.
+
+Ingestion batches include provider, operation, retrieval/source timestamps,
+schema fingerprint, request scope, normalized records, warnings, completeness
+metadata, and an explicit outcome. Empty successful responses require explicit
+completeness handling and are not automatically treated as successful datasets.
+
+Phase 2B adds a versioned JSONL bundle manifest with SHA-256 checksums, row
+counts, schema fingerprints, scope, license metadata, and synthetic status.
+The validator rejects path traversal, checksum, row-count, malformed JSONL, and
+unsupported-version failures before persistence.
