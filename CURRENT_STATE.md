@@ -53,3 +53,5 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - Production domains and deployment environment.
 - Model features, training data, and evaluation thresholds.
 - PostgreSQL execution of the Phase 2A/2B migrations and repository integration is configured in GitHub Actions; local execution is pending because Docker and the PostgreSQL client are unavailable.
+
+Phase 10A adds canonical, fixture-backed shot infrastructure on `phase-10-shot-analytics`. Migration `0007_shot_events` stores provider-neutral shot attempts with provider identity, canonical Game/Team/Player foreign keys, dual coordinate fields, versioned zones, shot classification, and source-run provenance. Fixture ingestion is atomic, idempotent, mapping-first, and synthetic data remains withheld. Shot summaries, player shot summaries, and bounded zone distributions are exposed through publication-aware APIs. No frontend, shot visualization, live data, model training, or dataset release was added.

@@ -40,7 +40,7 @@ class NormalizedShot(BaseModel):
     point_value: int = Field(ge=0, le=3)
 
     @model_validator(mode="after")
-    def validate_shot(self) -> "NormalizedShot":
+    def validate_shot(self) -> NormalizedShot:
         coordinate_pairs = ((self.provider_x, self.provider_y), (self.normalized_x, self.normalized_y))
         if any((x is None) != (y is None) for x, y in coordinate_pairs):
             raise ValueError("shot coordinates must be supplied as complete pairs")

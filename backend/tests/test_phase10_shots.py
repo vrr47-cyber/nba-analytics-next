@@ -7,6 +7,7 @@ from backend.app.domain.shots import NormalizedShot, ShotResult, ShotType, dista
 from backend.app.providers.registry import create_teams_provider
 from backend.app.services.shots import EXPECTED_FG_MIN_OBSERVATIONS, aggregate_shots
 from backend.app.database.models import Shot
+from backend.app.main import create_app
 
 
 def test_fixture_shot_revisions_are_deterministic_and_synthetic():
@@ -49,3 +50,11 @@ def test_shot_aggregation_returns_expected_values_only_after_threshold():
     assert summary["expected_fg_percentage"] is None
     assert summary["expected_points"] is None
     assert EXPECTED_FG_MIN_OBSERVATIONS > len(rows)
+
+
+def test_shot_api_exposes_only_the_publication_aware_bounded_contract():
+    paths = create_app().openapi()["paths"]
+    assert "/api/v1/shots/summary" in paths
+    assert "/api/v1/shots/players/{player_id}" in paths
+    assert "/api/v1/shots/zones" in paths
+    assert "/api/v1/shots" not in paths

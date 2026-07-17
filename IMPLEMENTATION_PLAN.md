@@ -70,9 +70,11 @@ Phase 8 is implemented on `phase-8-player-analytics` with publication-aware `/ap
 
 Phase 9 is implemented on `phase-9-explore-dashboard` as a compact composition layer at `/`. The bounded `/api/v1/explore` endpoint delegates featured teams to Team Analytics and featured players to Player Analytics, and adds only the global bounded recent-final-games composition that cannot be assembled efficiently from team-specific endpoints without client-side N+1 requests. The frontend reuses the shared coverage banner, metric formatting, loading/error/empty patterns, and existing Teams/Players routes. Explore contains no new metric formulas, rankings, AI summaries, shot analytics, projections, live modules, caching, Redis, materialized tables, or migration. Synthetic samples remain visible only with an explicit withheld-publication state.
 
-## Phase 4 — shot analytics
+## Phase 10A — canonical shot infrastructure
 
-Add shot normalization, eligibility rules, shot profiles, expected-value modeling, and actual-versus-expected outputs. Keep the module withheld when coverage is insufficient.
+Implemented on `phase-10-shot-analytics` as an infrastructure-only milestone. Migration `0007_shot_events` adds canonical shot attempts without duplicating Game, Team, or Player identity. The provider-neutral fixture adapter normalizes provider coordinates, preserves provider and normalized coordinates, records versioned zones and shot types, and uses `(provider_name, game_id, provider_shot_id)` as the uniqueness boundary. The ingestion service requires an existing final game and existing provider mappings, validates complete payloads before persistence, supports exact replay and explicit correction mode, records SourceRun and CoverageEvaluation provenance, and never creates a release for synthetic data.
+
+Reusable shot aggregation supports attempts, makes, FG%, 3PT%, eFG%, actual points, average distance, zone/type distributions, and bounded coordinates. Expected FG uses a transparent distance-bucket plus shot-type lookup and returns null below the qualification threshold; it does not use zones, machine learning, or synthetic training data. Publication-aware APIs are `/api/v1/shots/summary`, `/api/v1/shots/players/{player_id}`, and `/api/v1/shots/zones`. Frontend pages, visualizations, live ingestion, predictions, and raw-shot archive APIs remain out of scope.
 
 ## Phase 5 — forecasts and models
 

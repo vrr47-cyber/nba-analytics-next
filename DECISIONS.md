@@ -238,3 +238,13 @@ Status: Accepted for Phase 9
 Explore is a composition layer, not a third analytics subsystem. Featured teams and featured players are selected through the existing Team Analytics and Player Analytics services, with no duplicated formulas or new ranking semantics. A bounded `/api/v1/explore` endpoint is justified only because the existing team-specific recent-games endpoint cannot provide a global recent-games section without client-side N+1 requests. The endpoint composes existing analytics responses and performs only bounded final-game selection.
 
 The root `/` route remains the single Explore landing page. Featured cards are navigational summaries, never rankings or leaderboards. Explore remains compact and excludes AI summaries, power models, shot analytics, projections, playoff probabilities, live modules, caching, Redis, materialized tables, and migrations. Synthetic fixture responses remain visible only with `synthetic=true` and `publishable=false`.
+
+## D-024 — Phase 10A canonical shot infrastructure
+
+Status: Accepted for Phase 10A
+
+Canonical shot attempts are stored in `shots`; no duplicate identity tables are introduced. A shot is identified by `(provider_name, game_id, provider_shot_id)`, while Game, Team, and Player provider mappings remain authoritative for all foreign-key resolution. Structural identity is immutable after insertion. The table stores both provider and normalized coordinates, a versioned zone code, shot type, result, point value, distance, sequence metadata, and SourceRun provenance.
+
+Phase 10A accepts only complete fixture game payloads whose game, team, and player mappings already exist and whose game is final. Duplicate provider IDs, missing mappings, invalid classifications, incomplete payloads, and non-participant teams fail before domain persistence. Exact replay is unchanged; mutable shot corrections require correction mode. Synthetic source runs and coverage evaluations are always withheld and no dataset release is created.
+
+Expected FG is a deterministic, transparent lookup keyed by distance bucket and shot type. It is not derived from zones, does not use machine learning, and returns null until the configured observation threshold is met. Shot analytics APIs use the shared scope, coverage, provenance, and publication envelope and expose only bounded coordinate samples, not a raw shot archive. No frontend, live, caching, Redis, prediction, or model-training capability is part of Phase 10A.
