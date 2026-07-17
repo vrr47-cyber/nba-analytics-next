@@ -159,7 +159,9 @@ def _validate_score_progression(game: Game, team_stats: list[TeamGameStats], eve
         raise PlayByPlayIngestionError("complete play-by-play periods must be contiguous")
     for period in periods:
         period_events = [event for event, _ in events if event.period == period]
-        if period_events[0].event_type != PlayEventType.PERIOD_START or period_events[-1].event_type != PlayEventType.PERIOD_END:
+        starts_correctly = period_events[0].event_type == PlayEventType.PERIOD_START or (period == 1 and len(period_events) > 1 and period_events[0].event_type == PlayEventType.GAME_START and period_events[1].event_type == PlayEventType.PERIOD_START)
+        ends_correctly = period_events[-1].event_type == PlayEventType.PERIOD_END or (period == periods[-1] and len(period_events) > 1 and period_events[-2].event_type == PlayEventType.PERIOD_END and period_events[-1].event_type == PlayEventType.GAME_END)
+        if not starts_correctly or not ends_correctly:
             raise PlayByPlayIngestionError(f"period {period} must have explicit start and end events")
     previous = (0, 0)
     scoring_totals: dict[UUID, int] = defaultdict(int)
