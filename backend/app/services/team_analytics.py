@@ -114,7 +114,9 @@ def coverage_for(team: Team, aggregate: _Aggregate, synthetic: bool = False) -> 
     return coverage, publication, Provenance(source="canonical-warehouse", source_updated_at=max(updates) if updates else None, ingested_at=datetime.now(timezone.utc), metric_version=METRIC_VERSION, synthetic=synthetic, contributing_source_run_count=len({game.source_run_id for game, _, _ in aggregate.games}))
 
 
-def team_summaries(session: Session, season_code: str | None, competition_code: str | None, search: str | None, conference: str | None, sort: str, descending: bool) -> tuple[list[TeamSummary], Coverage, PublicationDecision, Provenance]:
+def team_summaries(session: Session, season_code: str | None, competition_code: str | None, search: str | None, conference: str | None, sort: str, descending: bool, limit: int = 50) -> tuple[list[TeamSummary], Coverage, PublicationDecision, Provenance]:
+    if limit < 1 or limit > 100:
+        raise TeamAnalyticsError("team directory limit must be between 1 and 100")
     teams = list(session.scalars(select(Team).where(Team.active.is_(True)).order_by(Team.full_name)))
     if search:
         needle = search.casefold()
@@ -140,6 +142,7 @@ def team_summaries(session: Session, season_code: str | None, competition_code: 
         value = item.name if sort == "name" else getattr(item.metrics, sort)
         return (value is None, value if value is not None else 0, item.name, str(item.id))
     results.sort(key=key, reverse=descending)
+    results = results[:limit]
     reason = "Synthetic recorded sample — not publishable." if results else "No teams match the requested scope."
     return results, Coverage(included_games=sum(c.included_games for c in coverages), included_entities=len(results), reason=reason), PublicationDecision(publishable=False, code="synthetic_fixture", reason=reason), Provenance(source="canonical-warehouse", metric_version=METRIC_VERSION, synthetic=True, contributing_source_run_count=sum(p.contributing_source_run_count or 0 for p in provenances))
 

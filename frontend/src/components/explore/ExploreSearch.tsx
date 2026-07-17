@@ -1,0 +1,3 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+export function ExploreSearch() { const [value, setValue] = useState(""); const navigate = useNavigate(); const search = (path: string) => { const query = value.trim(); if (query) navigate(`${path}?search=${encodeURIComponent(query)}`); }; return <div className="explore-search"><input aria-label="Explore search" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Search teams or players" /><button onClick={() => search("/teams")}>Search Teams</button><button onClick={() => search("/players")}>Search Players</button></div>; }

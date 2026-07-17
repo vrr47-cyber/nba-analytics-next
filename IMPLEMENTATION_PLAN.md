@@ -66,6 +66,10 @@ Phase 7 is implemented on `phase-7-team-analytics` as the first user-facing vert
 
 Phase 8 is implemented on `phase-8-player-analytics` with publication-aware `/api/v1/players` directory, detail, recent-games, trends, and splits routes plus `/players` and `/players/:playerId` frontend routes. Player metrics use aggregate numerators and denominators, separate games available from games played, exclude DNP rows from metric denominators while preserving them in logs, and expose current roster team separately from statistical team attribution. The directory is bounded at 100 results with validated filters and stable null-last ordering. No starter split is shown without completeness, no migration or transaction-history model is added, and synthetic samples remain visibly withheld.
 
+## Phase 9 — Explore Dashboard
+
+Phase 9 is implemented on `phase-9-explore-dashboard` as a compact composition layer at `/`. The bounded `/api/v1/explore` endpoint delegates featured teams to Team Analytics and featured players to Player Analytics, and adds only the global bounded recent-final-games composition that cannot be assembled efficiently from team-specific endpoints without client-side N+1 requests. The frontend reuses the shared coverage banner, metric formatting, loading/error/empty patterns, and existing Teams/Players routes. Explore contains no new metric formulas, rankings, AI summaries, shot analytics, projections, live modules, caching, Redis, materialized tables, or migration. Synthetic samples remain visible only with an explicit withheld-publication state.
+
 ## Phase 4 — shot analytics
 
 Add shot normalization, eligibility rules, shot profiles, expected-value modeling, and actual-versus-expected outputs. Keep the module withheld when coverage is insufficient.
