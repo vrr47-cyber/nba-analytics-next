@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -112,12 +112,12 @@ class Team(TimestampedModel):
 
 class Player(TimestampedModel):
     __tablename__ = "players"
-    slug: Mapped[str] = mapped_column(String(100), unique=True)
+    slug: Mapped[str] = mapped_column(String(100), index=True)
     full_name: Mapped[str] = mapped_column(String(150))
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     position: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    birth_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 

@@ -34,6 +34,7 @@ The prototype branch contains a single Explore-style dashboard with responsive p
 - Phase 3A is implemented on `phase-3-provider-ingestion` as a provider-neutral, fixture-backed Teams boundary. The fixture is fictional, synthetic, deterministic, and makes no network calls.
 - Teams ingestion records a source run and coverage evaluation only; no Teams dataset release is created, and all Teams-only publication remains withheld.
 - A generic league-provider identity mapping was added because Phase 2 had mappings for teams, players, and games but not leagues.
+- Phase 3B adds separate fixture-only player and roster ingestion services. Player identity uses provider mappings exclusively; no provider-independent canonical player key exists, so unmapped players are created rather than matched by name, slug, or biography. Roster rows are stable season/competition/team/player/snapshot memberships and update in place.
 
 ## Not yet decided or approved
 

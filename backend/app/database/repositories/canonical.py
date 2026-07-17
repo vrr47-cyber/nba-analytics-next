@@ -66,9 +66,6 @@ class TeamRepository(_Repository[Team]):
 class PlayerRepository(_Repository[Player]):
     model = Player
 
-    def by_slug(self, slug: str) -> Player | None:
-        return self.session.scalar(select(Player).where(Player.slug == slug))
-
 
 class RosterRepository(_Repository[RosterSnapshot]):
     model = RosterSnapshot

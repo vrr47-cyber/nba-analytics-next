@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Protocol
 
-from backend.app.domain.canonical import NormalizedLeague, NormalizedTeam
+from backend.app.domain.canonical import NormalizedLeague, NormalizedPlayer, NormalizedRosterEntry, NormalizedTeam
 from backend.app.domain.team_scope import TeamScopePolicy
 from backend.app.providers.fixture import FixtureTeamsProvider
 
@@ -17,6 +17,10 @@ class TeamsProvider(Protocol):
     synthetic: bool
 
     def load_teams(self, scope: TeamScopePolicy) -> tuple[NormalizedLeague, tuple[NormalizedTeam, ...], str, str, TeamScopePolicy]: ...
+
+    def load_players(self, revision: str = "v1") -> tuple[tuple[NormalizedPlayer, ...], str, str, str]: ...
+
+    def load_rosters(self, revision: str = "v1") -> tuple[tuple[NormalizedRosterEntry, ...], str, str, str]: ...
 
 
 class ProviderRegistry:
