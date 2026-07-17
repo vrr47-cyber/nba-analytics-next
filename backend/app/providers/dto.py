@@ -125,3 +125,32 @@ class FixtureBoxScoreDTO(BaseModel):
     complete_roster_coverage: bool = True
     team_stats: tuple[FixtureTeamStatDTO, ...]
     player_stats: tuple[FixturePlayerStatDTO, ...]
+
+
+class FixtureEventParticipantDTO(BaseModel):
+    role: str
+    provider_team_id: str | None = None
+    provider_player_id: str | None = None
+
+
+class FixturePlayByPlayEventDTO(BaseModel):
+    provider_event_id: str = Field(min_length=1)
+    sequence_number: int = Field(ge=0)
+    period: int = Field(ge=1)
+    clock_seconds_remaining: int = Field(ge=0)
+    event_type: str
+    outcome: str | None = None
+    points_value: int | None = Field(default=None, ge=0)
+    home_score: int = Field(ge=0)
+    away_score: int = Field(ge=0)
+    participants: tuple[FixtureEventParticipantDTO, ...] = ()
+
+
+class FixturePlayByPlayDTO(BaseModel):
+    provider: str = "fixture"
+    schema_version: str
+    revision: str
+    loaded_at: datetime
+    provider_game_id: str = Field(min_length=1)
+    complete_payload: bool = True
+    events: tuple[FixturePlayByPlayEventDTO, ...]

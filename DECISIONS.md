@@ -175,3 +175,38 @@ Revision v2 changes statistics and participation with stable identities and
 requires correction mode. Correction mode never bypasses payload validation,
 mapping resolution, final-game eligibility, roster validation, duplicate
 detection, or statistical invariants.
+
+## D-020 — Phase 6 canonical play-by-play events
+
+Status: Accepted for Phase 6
+
+Phase 6 adds `play_by_play_events` and typed
+`play_by_play_event_participants` tables. Event identity is strictly
+`(game_id, provider_name, provider_event_id)`; provider event IDs are required
+and immutable. Provider sequence is ordering metadata with its own scoped
+uniqueness constraint and is never used as identity. Canonical event UUIDs are
+retained across replay and correction.
+
+Participant roles are an explicit vocabulary, not arbitrary strings. Each
+participant row references exactly one canonical team or player. Player
+participants resolve through `PlayerProviderId` and use the existing latest
+roster observation on or before the UTC-derived game date to establish team
+attribution. Names, jerseys, descriptions, scores, and event position are not
+identity mechanisms.
+
+The supported event vocabulary is game start, period start, made or missed
+field goal, free throw, rebound, turnover, foul, substitution, timeout, jump
+ball, period end, and game end. Review and generic administrative events are
+deferred. Complete fixture payloads require deterministic sequences, explicit
+period boundaries, valid clocks, complete scoring progression, final-score
+agreement with `Game`, and team-score agreement with Phase 5 box scores.
+
+Normal ingestion permits only first insertion and exact semantic replay,
+including reordered input. Additions, removals, sequence changes, participant
+changes, and field changes require correction mode. Correction mode cannot
+bypass identity, mapping, final-game eligibility, role, roster, ordering,
+duplicate, clock, or score validation. Retained provider events preserve their
+canonical UUIDs. Removed events and participants are hard-deleted inside the
+atomic complete-snapshot correction transaction because the repository has no
+supersession model. Synthetic source runs and coverage evaluations remain
+withheld and no dataset release is created.

@@ -1,6 +1,6 @@
 # NBA Analytics Implementation Plan
 
-Status: Phase 3A — fixture-backed provider boundary complete
+Status: Phase 6 — fixture-backed play-by-play ingestion complete
 
 ## Phase 0 — specifications and decisions
 
@@ -41,6 +41,22 @@ revisions require correction mode, while identity, mapping, final-game
 eligibility, roster resolution, duplicate detection, and invariants cannot be
 bypassed. Redis, live data, play-by-play, shots, models, APIs, frontend work,
 and releases are out of scope.
+
+### Phase 6 — Completed-game play-by-play
+
+Phase 6 is implemented on `phase-6-play-by-play-ingestion` as a fixture-only,
+provider-neutral completed-game event boundary. The `0006_play_by_play_events`
+migration adds canonical event and typed participant rows. Provider event IDs
+are the durable identity; sequence is ordering metadata. Complete payloads are
+prevalidated against final `Game` scores and Phase 5 `TeamGameStats`, and
+player participants are resolved through mappings plus the existing roster
+observation policy. Exact and reordered semantic replays are unchanged.
+Correction mode permits validated field, participant, sequence, insertion, and
+removal corrections while retaining canonical UUIDs; removed events are hard
+deleted as a complete-snapshot replacement because no supersession schema
+exists. Synthetic coverage is withheld and no release is created. Live
+polling, play-by-play APIs, possessions, lineups, shot coordinates, models,
+and real providers remain out of scope.
 
 ## Phase 4 — shot analytics
 

@@ -246,6 +246,43 @@ class PlayerGameStats(TimestampedModel):
     __table_args__ = (UniqueConstraint("game_id", "player_id", "team_id", name="uq_player_game_stats"),)
 
 
+class PlayByPlayEvent(TimestampedModel):
+    __tablename__ = "play_by_play_events"
+    game_id: Mapped[UUID] = mapped_column(ForeignKey("games.id"))
+    provider_name: Mapped[str] = mapped_column(String(100))
+    provider_event_id: Mapped[str] = mapped_column(String(150))
+    sequence_number: Mapped[int] = mapped_column(Integer)
+    period: Mapped[int] = mapped_column(Integer)
+    clock_seconds_remaining: Mapped[int] = mapped_column(Integer)
+    event_type: Mapped[str] = mapped_column(String(40))
+    outcome: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    points_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    home_score: Mapped[int] = mapped_column(Integer)
+    away_score: Mapped[int] = mapped_column(Integer)
+    source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source_run_id: Mapped[UUID] = mapped_column(ForeignKey("source_runs.id"))
+    __table_args__ = (
+        UniqueConstraint("game_id", "provider_name", "provider_event_id", name="uq_play_event_provider_identity"),
+        UniqueConstraint("game_id", "provider_name", "sequence_number", name="uq_play_event_provider_sequence"),
+        CheckConstraint("sequence_number >= 0", name="ck_play_event_sequence_nonnegative"),
+        CheckConstraint("period > 0", name="ck_play_event_period_positive"),
+        CheckConstraint("clock_seconds_remaining >= 0 AND clock_seconds_remaining <= 720", name="ck_play_event_clock_range"),
+        CheckConstraint("home_score >= 0 AND away_score >= 0", name="ck_play_event_scores_nonnegative"),
+    )
+
+
+class PlayByPlayEventParticipant(TimestampedModel):
+    __tablename__ = "play_by_play_event_participants"
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("play_by_play_events.id"))
+    role: Mapped[str] = mapped_column(String(40))
+    team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
+    player_id: Mapped[UUID | None] = mapped_column(ForeignKey("players.id"), nullable=True)
+    __table_args__ = (
+        UniqueConstraint("event_id", "role", name="uq_play_event_participant_role"),
+        CheckConstraint("(team_id IS NOT NULL AND player_id IS NULL) OR (team_id IS NULL AND player_id IS NOT NULL)", name="ck_play_event_one_participant_identity"),
+    )
+
+
 class StandingsSnapshot(TimestampedModel):
     __tablename__ = "standings_snapshots"
     season_id: Mapped[UUID] = mapped_column(ForeignKey("seasons.id"))

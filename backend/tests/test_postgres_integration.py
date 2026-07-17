@@ -5,13 +5,14 @@ import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, Player, PlayerGameStats, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamGameStats, TeamProviderId
+from backend.app.database.models import Competition, CoverageEvaluation, DatasetRelease, Game, GameProviderId, League, LeagueProviderId, PlayByPlayEvent, PlayByPlayEventParticipant, Player, PlayerGameStats, PlayerProviderId, RosterSnapshot, Season, SourceRun, Team, TeamGameStats, TeamProviderId
 from backend.app.database.repositories.canonical import ProviderIdentityRepository, RepositoryError
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY
 from backend.app.domain.player_roster_scope import ACTIVE_FIXTURE_PLAYER_ROSTER_POLICY
 from backend.app.providers.registry import create_teams_provider
 from backend.app.services.bundle import import_validated_bundle, validate_bundle
 from backend.app.services.box_scores import BoxScoreIngestionError, ingest_box_score_reference, validate_box_score_reference
+from backend.app.services.play_by_play import PlayByPlayIngestionError, ingest_play_by_play_reference, validate_play_by_play_reference
 from backend.app.services.games import GameStatusTransitionError, StructuralGameIdentityConflict, ingest_games_reference, validate_games_reference
 from backend.app.services.players import ingest_players_reference
 from backend.app.services.rosters import RosterIngestionError, ingest_rosters_reference
@@ -260,3 +261,57 @@ def test_fixture_box_score_replay_correction_and_withholding(postgres_engine):
             assert session.query(PlayerGameStats).filter(PlayerGameStats.game_id == game_id).count() == 4
             assert session.query(DatasetRelease).filter(DatasetRelease.dataset_name.in_(["team_game_stats", "player_game_stats"])).count() == 0
             assert all(row.publication_status == "withheld" for row in session.query(CoverageEvaluation).filter(CoverageEvaluation.dataset_name.in_(["team_game_stats", "player_game_stats"])).all())
+
+
+def test_fixture_play_by_play_replay_reorder_correction_and_withholding(postgres_engine):
+    provider = create_teams_provider("fixture")
+    league_payload, teams, team_schema, _, scope = provider.load_teams(ACTIVE_TEAMS_FIXTURE_POLICY)
+    players, player_schema, player_fingerprint, _ = provider.load_players("v1")
+    rosters, roster_schema, roster_fingerprint, _ = provider.load_rosters("v1")
+    games, game_schema, game_fingerprint, _ = provider.load_games("v2")
+    box_payload, box_schema, box_fingerprint, _ = provider.load_box_score("v1")
+    payload_v1, pbp_schema, pbp_fingerprint, _ = provider.load_play_by_play("v1")
+    payload_v2, _, pbp_fingerprint_v2, _ = provider.load_play_by_play("v2")
+    with Session(postgres_engine) as session:
+        with session.begin():
+            existing_game_mapping = session.scalar(select(GameProviderId).where(GameProviderId.provider_name == "fixture", GameProviderId.external_id == "game-redwood-cinder-2099"))
+            if existing_game_mapping is not None:
+                existing_game_id = existing_game_mapping.game_id
+                existing_events = list(session.scalars(select(PlayByPlayEvent).where(PlayByPlayEvent.game_id == existing_game_id, PlayByPlayEvent.provider_name == "fixture")))
+                if existing_events:
+                    existing_event_ids = [event.id for event in existing_events]
+                    session.query(PlayByPlayEventParticipant).filter(PlayByPlayEventParticipant.event_id.in_(existing_event_ids)).delete(synchronize_session=False)
+                    session.query(PlayByPlayEvent).filter(PlayByPlayEvent.id.in_(existing_event_ids)).delete(synchronize_session=False)
+                session.query(PlayerGameStats).filter(PlayerGameStats.game_id == existing_game_id).delete(synchronize_session=False)
+                session.query(TeamGameStats).filter(TeamGameStats.game_id == existing_game_id).delete(synchronize_session=False)
+                session.flush()
+            ingest_teams_reference(session, provider="fixture", league=league_payload, teams=teams, schema_version=team_schema, normalized_payload_fingerprint="phase6-setup", scope_policy=scope, synthetic=True)
+            league = session.scalar(select(League).where(League.code == "fixture-league"))
+            assert league is not None
+            season = session.scalar(select(Season).where(Season.league_id == league.id, Season.season_code == "2099-00"))
+            competition = session.scalar(select(Competition).where(Competition.league_id == league.id, Competition.code == "regular"))
+            assert season is not None and competition is not None
+            ingest_players_reference(session, provider="fixture", players=players, schema_version=player_schema, normalized_payload_fingerprint=player_fingerprint, synthetic=True)
+            ingest_rosters_reference(session, provider="fixture", rosters=rosters, schema_version=roster_schema, normalized_payload_fingerprint=roster_fingerprint, synthetic=True)
+            ingest_games_reference(session, provider="fixture", games=games, schema_version=game_schema, normalized_payload_fingerprint=game_fingerprint, synthetic=True)
+            ingest_box_score_reference(session, provider="fixture", payload=box_payload, schema_version=box_schema, normalized_payload_fingerprint=box_fingerprint, synthetic=True)
+            first = ingest_play_by_play_reference(session, provider="fixture", payload=payload_v1, schema_version=pbp_schema, normalized_payload_fingerprint=pbp_fingerprint, synthetic=True)
+            assert first["counts"]["inserted"] == len(payload_v1.events)
+            assert first["counts"]["removed"] == 0
+            event_ids = {row.provider_event_id: row.id for row in session.query(PlayByPlayEvent).filter_by(game_id=next(iter(session.query(GameProviderId).filter_by(provider_name="fixture", external_id="game-redwood-cinder-2099"))).game_id, provider_name="fixture").all()}
+            reordered = payload_v1.model_copy(update={"events": tuple(reversed(payload_v1.events))})
+            assert validate_play_by_play_reference(session, provider="fixture", payload=reordered)["mutated"] is False
+            replay = ingest_play_by_play_reference(session, provider="fixture", payload=reordered, schema_version=pbp_schema, normalized_payload_fingerprint=pbp_fingerprint, synthetic=True)
+            assert replay["counts"] == {"inserted": 0, "updated": 0, "unchanged": len(payload_v1.events), "removed": 0}
+            with pytest.raises(PlayByPlayIngestionError, match="requires correction mode"):
+                ingest_play_by_play_reference(session, provider="fixture", payload=payload_v2, schema_version=pbp_schema, normalized_payload_fingerprint=pbp_fingerprint_v2, synthetic=True)
+            corrected = ingest_play_by_play_reference(session, provider="fixture", payload=payload_v2, schema_version=pbp_schema, normalized_payload_fingerprint=pbp_fingerprint_v2, synthetic=True, correction_mode=True)
+            assert corrected["counts"]["inserted"] == 1
+            assert corrected["counts"]["removed"] == 1
+            retained = {row.provider_event_id: row.id for row in session.query(PlayByPlayEvent).filter_by(game_id=next(iter(session.query(GameProviderId).filter_by(provider_name="fixture", external_id="game-redwood-cinder-2099"))).game_id, provider_name="fixture").all()}
+            for provider_event_id, event_id in event_ids.items():
+                if provider_event_id in retained:
+                    assert retained[provider_event_id] == event_id
+            assert session.query(PlayByPlayEventParticipant).join(PlayByPlayEvent).filter(PlayByPlayEvent.provider_name == "fixture").count() > 0
+            assert session.query(DatasetRelease).filter_by(dataset_name="play_by_play").count() == 0
+            assert all(row.publication_status == "withheld" for row in session.query(CoverageEvaluation).filter_by(dataset_name="play_by_play").all())

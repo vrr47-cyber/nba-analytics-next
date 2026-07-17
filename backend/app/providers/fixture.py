@@ -6,9 +6,10 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from backend.app.domain.box_scores import NormalizedBoxScorePayload
+from backend.app.domain.play_by_play import NormalizedEventParticipant, NormalizedPlayByPlayEvent, NormalizedPlayByPlayPayload, ParticipantRole, PlayEventType
 from backend.app.domain.canonical import BoxScoreLine, CompetitionCode, GameStatus, NormalizedGame, NormalizedLeague, NormalizedPlayer, NormalizedPlayerGameStats, NormalizedRosterEntry, NormalizedTeam, NormalizedTeamGameStats, ParticipationStatus, SourceMetadata
 from backend.app.domain.team_scope import ACTIVE_TEAMS_FIXTURE_POLICY, TeamScopePolicy
-from backend.app.providers.dto import FixtureBoxScoreDTO, FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO, FixturePlayerStatDTO, FixtureTeamStatDTO
+from backend.app.providers.dto import FixtureBoxScoreDTO, FixtureEventParticipantDTO, FixtureGameDTO, FixtureGamesDTO, FixturePlayerDTO, FixturePlayersDTO, FixturePlayByPlayDTO, FixturePlayByPlayEventDTO, FixtureRosterDTO, FixtureRostersDTO, FixtureTeamDTO, FixtureTeamsDTO, FixturePlayerStatDTO, FixtureTeamStatDTO
 
 
 class FixtureTeamsProvider:
@@ -146,3 +147,66 @@ class FixtureTeamsProvider:
         teams = tuple(NormalizedTeamGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_team_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, team_external_id=row.provider_team_id, opponent_external_id=row.opponent_provider_team_id, home_away=row.home_away, result=row.result, minutes=row.minutes, **line_kwargs(row)) for row in payload.team_stats)
         players = tuple(NormalizedPlayerGameStats(source=SourceMetadata(provider=self.name, external_id=f"{payload.provider_game_id}:{row.provider_player_id}", retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, player_external_id=row.provider_player_id, team_external_id=row.provider_team_id, starter=row.starter, participation_status=ParticipationStatus(row.participation_status), status_comment=row.status_comment, minutes=row.player_minutes, **line_kwargs(row)) for row in payload.player_stats)
         return NormalizedBoxScorePayload(game_external_id=payload.provider_game_id, team_stats=teams, player_stats=players, complete_roster_coverage=payload.complete_roster_coverage), payload.schema_version, fingerprint, payload.revision
+
+    def load_play_by_play(self, revision: str = "v1") -> tuple[NormalizedPlayByPlayPayload, str, str, str]:
+        loaded_at = datetime.now(timezone.utc)
+        events: list[FixturePlayByPlayEventDTO] = []
+        sequence = 1
+        home_score = 0
+        away_score = 0
+
+        def add(event_id: str, period: int, clock: int, event_type: str, *, outcome: str | None = None, points: int | None = None, team: str | None = None, player: str | None = None, role_team: str | None = None, role_player: str | None = None, participants: tuple[FixtureEventParticipantDTO, ...] = ()) -> None:
+            nonlocal sequence, home_score, away_score
+            if points:
+                if team == "team-redwood":
+                    home_score += points
+                else:
+                    away_score += points
+            event_participants = participants
+            if team is not None and player is not None and role_team is not None and role_player is not None:
+                event_participants = (FixtureEventParticipantDTO(role=role_team, provider_team_id=team), FixtureEventParticipantDTO(role=role_player, provider_player_id=player))
+            events.append(FixturePlayByPlayEventDTO(provider_event_id=event_id, sequence_number=sequence, period=period, clock_seconds_remaining=clock, event_type=event_type, outcome=outcome, points_value=points, home_score=home_score, away_score=away_score, participants=event_participants))
+            sequence += 1
+
+        add("fixture-event-game-start", 1, 720, "game_start")
+        period_points = ((25, 25), (26, 24), (25, 25), (25, 25))
+        for period, (redwood_total, cinder_total) in enumerate(period_points, start=1):
+            add(f"fixture-event-period-{period}-start", period, 720, "period_start")
+            add(f"fixture-event-missed-{period}", period, 715, "missed_field_goal", outcome="missed", team="team-redwood", player="player-ember", role_team="shooting_team", role_player="shooter")
+            add(f"fixture-event-rebound-{period}", period, 710, "rebound", team="team-cinder", player="player-flint", role_team="rebound_team", role_player="rebounder")
+            add(f"fixture-event-turnover-{period}", period, 705, "turnover", team="team-cinder", player="player-river", role_team="committing_team", role_player="committing_player")
+            add(f"fixture-event-foul-{period}", period, 700, "foul", team="team-redwood", player="player-ash", role_team="committing_team", role_player="committing_player")
+            add(f"fixture-event-timeout-{period}", period, 695, "timeout", participants=(FixtureEventParticipantDTO(role="timeout_team", provider_team_id="team-cinder"),))
+            add(f"fixture-event-substitution-{period}", period, 690, "substitution", participants=(FixtureEventParticipantDTO(role="entering_player", provider_player_id="player-ash"), FixtureEventParticipantDTO(role="exiting_player", provider_player_id="player-ember")))
+            if period == 1:
+                add("fixture-event-jump-ball", period, 685, "jump_ball", participants=(FixtureEventParticipantDTO(role="jump_ball_player_one", provider_player_id="player-ember"), FixtureEventParticipantDTO(role="jump_ball_player_two", provider_player_id="player-flint")))
+            def scoring_plays(total: int, team: str, players: tuple[str, str], prefix: str, event_period: int) -> None:
+                nonlocal sequence
+                points_list = [1] + [2] * ((total - 1) // 2) if total % 2 else [2] * (total // 2)
+                if total == 25 and prefix.endswith("p3"):
+                    points_list = [3] + [2] * 11
+                if total == 25 and prefix.endswith("p4"):
+                    points_list = [1] + [2] * 12
+                for index, value in enumerate(points_list):
+                    player = players[index % 2]
+                    clock = max(680 - index * 10, 1)
+                    if value == 1:
+                        add(f"{prefix}-free-throw-{index}", event_period, clock, "free_throw", outcome="made", points=1, team=team, player=player, role_team="shooting_team", role_player="shooter")
+                    else:
+                        add(f"{prefix}-field-goal-{index}", event_period, clock, "made_field_goal", outcome="made", points=value, team=team, player=player, role_team="scoring_team", role_player="shooter")
+            scoring_plays(redwood_total, "team-redwood", ("player-ember", "player-ash"), f"fixture-redwood-p{period}", period)
+            scoring_plays(cinder_total, "team-cinder", ("player-flint", "player-river"), f"fixture-cinder-p{period}", period)
+            add(f"fixture-event-period-{period}-end", period, 0, "period_end")
+        add("fixture-event-game-end", 4, 0, "game_end")
+        if revision == "v2":
+            events = [event for event in events if event.provider_event_id != "fixture-event-rebound-2"]
+            insert_at = next(index for index, event in enumerate(events) if event.provider_event_id == "fixture-event-timeout-3") + 1
+            prior = events[insert_at - 1]
+            events.insert(insert_at, FixturePlayByPlayEventDTO(provider_event_id="fixture-event-timeout-v2", sequence_number=0, period=3, clock_seconds_remaining=680, event_type="timeout", home_score=prior.home_score, away_score=prior.away_score, participants=(FixtureEventParticipantDTO(role="timeout_team", provider_team_id="team-redwood"),)))
+            events = [event.model_copy(update={"sequence_number": index, "home_score": event.home_score, "away_score": event.away_score}) for index, event in enumerate(events, start=1)]
+            events = [event.model_copy(update={"participants": (FixtureEventParticipantDTO(role="committing_team", provider_team_id="team-redwood"), FixtureEventParticipantDTO(role="committing_player", provider_player_id="player-ember"))}) if event.provider_event_id == "fixture-event-foul-4" else event for event in events]
+        payload = FixturePlayByPlayDTO(schema_version="fixture-play-by-play.v1", revision=revision, loaded_at=loaded_at, provider_game_id="game-redwood-cinder-2099", events=tuple(events))
+        serialized = json.dumps(payload.model_dump(mode="json", exclude={"loaded_at"}), sort_keys=True, separators=(",", ":"))
+        fingerprint = hashlib.sha256(serialized.encode()).hexdigest()
+        normalized_events = tuple(NormalizedPlayByPlayEvent(source=SourceMetadata(provider=self.name, external_id=event.provider_event_id, retrieved_at=loaded_at.isoformat(), schema_fingerprint=payload.schema_version), game_external_id=payload.provider_game_id, provider_event_id=event.provider_event_id, sequence_number=event.sequence_number, period=event.period, clock_seconds_remaining=event.clock_seconds_remaining, event_type=PlayEventType(event.event_type), outcome=event.outcome, points_value=event.points_value, home_score=event.home_score, away_score=event.away_score, participants=tuple(NormalizedEventParticipant(role=ParticipantRole(participant.role), team_external_id=participant.provider_team_id, player_external_id=participant.provider_player_id) for participant in event.participants)) for event in payload.events)
+        return NormalizedPlayByPlayPayload(game_external_id=payload.provider_game_id, events=normalized_events, complete_payload=payload.complete_payload), payload.schema_version, fingerprint, payload.revision
