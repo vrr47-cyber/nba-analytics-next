@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.database.models import Competition, Game, Player, PlayerGameStats, RosterSnapshot, Season, Team, TeamGameStats
+from backend.app.database.models import Competition, Game, Player, PlayerGameStats, RosterSnapshot, Season, SourceRun, Team, TeamGameStats
 from backend.app.domain.coverage import Coverage
 from backend.app.domain.metrics import METRIC_VERSION, estimated_possessions, ratio
 from backend.app.schemas.envelope import Provenance
@@ -99,7 +99,13 @@ def _rows(session: Session, team_id: UUID, season_code: str | None, competition_
     return team, aggregates.get(team_id, _Aggregate([])), season, competition
 
 
-def coverage_for(team: Team, aggregate: _Aggregate, synthetic: bool = True) -> tuple[Coverage, PublicationDecision, Provenance]:
+def _synthetic_for(session: Session, aggregate: _Aggregate) -> bool:
+    source_run_ids = {game.source_run_id for game, _, _ in aggregate.games}
+    runs = [session.get(SourceRun, source_run_id) for source_run_id in source_run_ids]
+    return bool(runs) and all(bool(run and (run.metadata_json or {}).get("synthetic")) for run in runs)
+
+
+def coverage_for(team: Team, aggregate: _Aggregate, synthetic: bool = False) -> tuple[Coverage, PublicationDecision, Provenance]:
     count = len(aggregate.games)
     reason = "Synthetic recorded sample — not publishable." if synthetic else ("No eligible final games." if count == 0 else "Recorded sample is partial.")
     coverage = Coverage(included_games=count, expected_games=None, included_entities=1, expected_entities=None, coverage_ratio=None, is_complete=False, is_publishable=False, reason=reason)
@@ -119,9 +125,11 @@ def team_summaries(session: Session, season_code: str | None, competition_code: 
     coverages = []
     provenances = []
     aggregates, _, _ = _aggregate_map(session, season_code, competition_code)
+    source_runs = {run.id: run for run in session.scalars(select(SourceRun))}
     for team in teams:
         aggregate = aggregates.get(team.id, _Aggregate([]))
-        coverage, publication, provenance = coverage_for(team, aggregate)
+        synthetic = bool(aggregate.games) and all(bool(source_runs.get(game.source_run_id) and (source_runs[game.source_run_id].metadata_json or {}).get("synthetic")) for game, _, _ in aggregate.games)
+        coverage, publication, provenance = coverage_for(team, aggregate, synthetic)
         results.append(TeamSummary(id=team.id, name=team.full_name, abbreviation=team.abbreviation, conference=team.conference, metrics=aggregate.metrics()))
         coverages.append(coverage)
         provenances.append(provenance)
@@ -138,7 +146,7 @@ def team_summaries(session: Session, season_code: str | None, competition_code: 
 
 def team_detail(session: Session, team_id: UUID, season_code: str | None, competition_code: str | None) -> tuple[TeamDetail, Coverage, PublicationDecision, Provenance]:
     team, aggregate, _, _ = _rows(session, team_id, season_code, competition_code)
-    coverage, publication, provenance = coverage_for(team, aggregate)
+    coverage, publication, provenance = coverage_for(team, aggregate, _synthetic_for(session, aggregate))
     return TeamDetail(id=team.id, name=team.full_name, abbreviation=team.abbreviation, conference=team.conference, city=team.city, metrics=aggregate.metrics()), coverage, publication, provenance
 
 
@@ -150,7 +158,7 @@ def recent_games(session: Session, team_id: UUID, season_code: str | None, compe
         opponent_id = opponent.team_id
         opponent_team = session.get(Team, opponent_id)
         data.append(RecentGame(game_id=game.id, date=game.game_date, opponent_id=opponent_id, opponent_name=opponent_team.full_name if opponent_team else "Unavailable", home_away=stats.home_away, result="W" if stats.points > opponent.points else "L", team_points=stats.points, opponent_points=opponent.points, competition=competition_code or "recorded", official_external_url=game.official_external_url, archival_external_url=game.archival_external_url))
-    return data, *coverage_for(team, aggregate)
+    return data, *coverage_for(team, aggregate, _synthetic_for(session, aggregate))
 
 
 def trends(session: Session, team_id: UUID, season_code: str | None, competition_code: str | None) -> tuple[list[TrendPoint], Coverage, PublicationDecision, Provenance]:
@@ -164,13 +172,13 @@ def trends(session: Session, team_id: UUID, season_code: str | None, competition
         wins += ordered[index][1].points > ordered[index][2].points
         losses += ordered[index][1].points <= ordered[index][2].points
         points.append(TrendPoint(game_id=ordered[index][0].id, date=ordered[index][0].game_date, net_rating=current.net_rating, offensive_rating=current.offensive_rating, defensive_rating=current.defensive_rating, pace=current.pace, cumulative_wins=wins, cumulative_losses=losses, sample_size=len(window)))
-    return points, *coverage_for(team, aggregate)
+    return points, *coverage_for(team, aggregate, _synthetic_for(session, aggregate))
 
 
 def roster(session: Session, team_id: UUID, season_code: str | None, competition_code: str | None) -> tuple[list[RosterEntry], Coverage, PublicationDecision, Provenance]:
     team, aggregate, season, competition = _rows(session, team_id, season_code, competition_code)
     if season is None:
-        return [], *coverage_for(team, aggregate)
+        return [], *coverage_for(team, aggregate, _synthetic_for(session, aggregate))
     snapshot_query = select(RosterSnapshot).where(RosterSnapshot.team_id == team_id, RosterSnapshot.season_id == season.id, RosterSnapshot.snapshot_at <= datetime.combine(date.max, datetime.min.time(), tzinfo=timezone.utc))
     if competition:
         snapshot_query = snapshot_query.where(RosterSnapshot.competition_id == competition.id)
@@ -194,4 +202,4 @@ def roster(session: Session, team_id: UUID, season_code: str | None, competition
         fga = sum(row.field_goals_attempted for row in rows)
         fta = sum(row.free_throws_attempted for row in rows)
         data.append(RosterEntry(player_id=player.id, name=player.full_name, position=snapshot.listed_position, jersey_number=snapshot.jersey_number, roster_status=snapshot.roster_status, games=len(rows), minutes=minutes, points=points, rebounds=sum(row.total_rebounds for row in rows), assists=sum(row.assists for row in rows), true_shooting_percentage=ratio(points, 2 * (fga + 0.44 * fta))))
-    return data, *coverage_for(team, aggregate)
+    return data, *coverage_for(team, aggregate, _synthetic_for(session, aggregate))
